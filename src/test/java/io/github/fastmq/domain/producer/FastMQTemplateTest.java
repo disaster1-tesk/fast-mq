@@ -16,7 +16,7 @@ public class FastMQTemplateTest extends BaseTest {
     @Test
     public void sendMsgTest() {
         HashMap<String, Object> msg = Maps.newHashMap();
-        msg.put("name", "wangwei");
+        msg.put("name", "disaster");
         msg.put("age", 20);
         fastMQTemplate.sendMsgAsync("disaster_topic", msg);
         fastMQTemplate.sendMsgAsync(FastMQConstant.DEFAULT_TOPIC, msg);
