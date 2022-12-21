@@ -4,13 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <groupId>org.springframework.boot</groupId>
-        <version>2.6.5</version>
-    </parent>
-
-    <groupId>io.github.disaster</groupId>
+    <groupId>io.github.disastercamp</groupId>
     <artifactId>fast-mq</artifactId>
     <version>${snapshot}</version>
 
@@ -77,24 +71,30 @@
         <refrections.version>0.9.11</refrections.version>
         <lombok.version>1.18.24</lombok.version>
         <redission.version>3.16.4</redission.version>
+        <spring.boot.version>2.6.5</spring.boot.version>
+        <common.version>3.12.0</common.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+            <version>${spring.boot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <version>${spring.boot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <version>${spring.boot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
+            <version>${spring.boot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -105,6 +105,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+            <version>${spring.boot.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>io.lettuce</groupId>
@@ -117,11 +118,12 @@
             <artifactId>redisson-spring-boot-starter</artifactId>
             <version>${redission.version}</version>
         </dependency>
-        <!--整合redission框架enc-->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
+            <version>${common.version}</version>
         </dependency>
+
         <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
