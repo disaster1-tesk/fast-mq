@@ -1,4 +1,6 @@
-![Snipaste_2022-12-21_18-13-23](/Users/disaster/Desktop/Snipaste_2022-12-21_18-13-23.png)
+<p align="center">
+    <img width="400" src="https://gitee.com/d__isaster/cornucopia/raw/master/img/fast-mq.png">
+</p>
 
 
 ## 🔥特性（Features）
