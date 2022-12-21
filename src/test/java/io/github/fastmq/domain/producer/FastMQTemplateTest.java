@@ -19,6 +19,7 @@ public class FastMQTemplateTest extends BaseTest {
         msg.put("name", "disaster");
         msg.put("age", 20);
         fastMQTemplate.sendMsgAsync("disaster_topic", msg);
+        fastMQTemplate.sendMsgAsync("disaster_topic", msg);
         fastMQTemplate.sendMsgAsync(FastMQConstant.DEFAULT_TOPIC, msg);
         while (true){
 

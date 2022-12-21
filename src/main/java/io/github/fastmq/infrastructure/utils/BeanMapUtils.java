@@ -1,11 +1,15 @@
 package io.github.fastmq.infrastructure.utils;
 
+import lombok.SneakyThrows;
+
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,8 +33,8 @@ public final class BeanMapUtils {
      * @throws InvocationTargetException failed to call setters
      * @throws NoSuchMethodException     the no such method exception
      */
-    public static final Object toBean(Class<?> type, Map<Object, ? extends Object> map)
-            throws IntrospectionException, IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
+    @SneakyThrows
+    public static final Object toBean(Class<?> type, Map<Object, ? extends Object> map) {
         BeanInfo beanInfo = Introspector.getBeanInfo(type);
         Object obj = type.getDeclaredConstructor().newInstance();
         PropertyDescriptor[] propertyDescriptors = beanInfo.getPropertyDescriptors();
@@ -46,6 +50,7 @@ public final class BeanMapUtils {
         }
         return obj;
     }
+
 
     /**
      * Converts a JavaBean to a map.

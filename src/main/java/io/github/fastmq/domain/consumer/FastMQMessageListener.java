@@ -6,6 +6,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The interface Fast mq message listener.
@@ -50,4 +51,5 @@ public @interface FastMQMessageListener {
      * @return int
      */
     int readSize() default -1;
+
 }

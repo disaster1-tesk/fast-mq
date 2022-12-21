@@ -2,9 +2,11 @@ package io.github.fastmq.domain.share;
 
 import io.github.fastmq.domain.consumer.FastMQListener;
 import io.github.fastmq.domain.consumer.FastMQMessageListener;
+import io.github.fastmq.domain.service.FastMQAsyncService;
 import io.github.fastmq.domain.service.FastMQService;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.prop.FastMQProperties;
+import io.github.fastmq.infrastructure.utils.ThreadPoolUtil;
 import jodd.util.concurrent.ThreadFactoryBuilder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -16,13 +18,15 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * mq的事件处理中心
@@ -40,12 +44,13 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
     /**
      * 存放没有注解修饰的监听器
      */
-    private Set<FastMQListener<?>> fastMQListeners0;
+    private Set<FastMQListener> fastMQListeners0;
 
     /**
      * 存放有注解修饰的监听器
      */
-    private Set<FastMQListener<?>> fastMQListeners1;
+    private Set<FastMQListener> fastMQListeners1;
+
 
     /**
      * redissonClient对象
@@ -60,7 +65,13 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
     private FastMQProperties fastMQProperties;
 
     /**
-     * 领域服务对象
+     * 领域服务对象-异步
+     */
+    @Autowired
+    private FastMQAsyncService fastMQAsyncService;
+
+    /**
+     * 领域服务对象-同步
      */
     @Autowired
     private FastMQService fastMQService;
@@ -70,12 +81,26 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
      */
     private ApplicationContext applicationContext;
 
+    private ScheduledExecutorService service = null;
+
     /**
      * Instantiates a new Mq center.
      */
     public MQCenter() {
         fastMQListeners0 = new HashSet<>();
         fastMQListeners1 = new HashSet<>();
+    }
+
+    @PostConstruct
+    public void init() {
+        service = Executors.newScheduledThreadPool(
+                fastMQProperties.getExecutor().getExecutorCoreSize(),
+                ThreadFactoryBuilder.create()
+                        .setDaemon(true)
+                        .setUncaughtExceptionHandler((t, e) -> log.debug("线程:{},异常{}", t.getName(), e.getMessage()))
+                        .setPriority(6)
+                        .get());
+        ThreadPoolUtil.init(service);
     }
 
     @Override
@@ -100,7 +125,7 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
         start();
     }
 
-    private void createConsumerGroup(FastMQListener<?> fastMQListener) {
+    private void createConsumerGroup(FastMQListener fastMQListener) {
         FastMQMessageListener fastMQMessageListener = fastMQListener.getClass().getAnnotation(FastMQMessageListener.class);
         RStream<Object, Object> stream = client.getStream(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_TOPIC
                 : fastMQMessageListener.topic());
@@ -111,8 +136,10 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
             id = StreamMessageId.ALL;
         }
         try {
-            stream.createGroup(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+            stream.createGroupAsync(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
                     : fastMQMessageListener.groupName(), id);
+            log.info("消费组{}创建成功", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+                    : fastMQMessageListener.groupName());
         } catch (RedisBusyException e) {
             log.info(e.getMessage());
         }
@@ -123,7 +150,7 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
      * 处理默认stream中的相关死信、超时信息重传、异步认领空闲过久的消息
      */
     public void checkPendingList1() {
-        for (FastMQListener<?> fastMQListener :
+        for (FastMQListener fastMQListener :
                 this.fastMQListeners1) {
             _checkPendingList(fastMQListener);
         }
@@ -133,85 +160,36 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
      * 处理指定stream中的相关死信、超时信息重传、异步认领空闲过久的消息
      */
     public void checkPendingList0() {
-        for (FastMQListener<?> fastMQListener :
+        for (FastMQListener fastMQListener :
                 this.fastMQListeners0) {
             _checkPendingList(fastMQListener);
         }
     }
 
-    private void _checkPendingList(FastMQListener<?> fastMQListener) {
-        FastMQMessageListener fastMQMessageListener = fastMQListener.getClass().getAnnotation(FastMQMessageListener.class);
-
-        RStream<Object, Object> stream = client.getStream(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_TOPIC
-                : fastMQMessageListener.topic());
-
-        //异步执行XPENDING key group [[IDLE min-idle-time] start end count  [consumer]] 获取某个消费者组中的未处理消息的相关信息
-        RFuture<List<PendingEntry>> future = stream.listPendingAsync(
-                Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
-                        : fastMQMessageListener.groupName(),
-                Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
-                        : fastMQMessageListener.consumeName(),
-                StreamMessageId.MIN,
-                StreamMessageId.MAX,
-                fastMQProperties.getIdle().getPendingListIdleThreshold(),
-                fastMQProperties.getIdle().getTimeUnit(),
-                fastMQProperties.getCheckPendingListSize());
-
-        future.thenAccept(pendingEntryList -> {
-                    Set<StreamMessageId> deadLetterIds = new HashSet<>();
-                    Set<StreamMessageId> idleIds = new HashSet<>();
-                    //获取死信消息
-                    for (PendingEntry entry :
-                            pendingEntryList) {
-                        long cnt = entry.getLastTimeDelivered();
-                        //判断是否超过fastMQProperties中指定的时间
-                        if (cnt >= this.fastMQProperties.getDeadLetterThreshold()) {
-                            //加入死信队列中
-                            deadLetterIds.add(entry.getId());
-                        } else {
-                            //否则加入超时队列中
-                            idleIds.add(entry.getId());
-                        }
-                    }
-                    //处理超时队列逻辑：目前仅支持随机消费者重新消费
-                    fastMQService.consumeIdleMessagesAsync(idleIds, fastMQListener);
-                    fastMQService.consumeDeadLetterMessagesAsync(deadLetterIds, fastMQListener);
-                    fastMQService.claimIdleConsumerAsync(fastMQListener);
-                }
-        ).exceptionally(exception -> {
-            exception.printStackTrace();
-            return null;
-        });
+    private void _checkPendingList(FastMQListener fastMQListener) {
+        if (fastMQProperties.getIsAsync()) {
+            fastMQAsyncService.checkPendingListAsync(fastMQListener);
+        } else {
+            fastMQService.checkPendingList(fastMQListener);
+        }
     }
+
 
     /**
      * 消费默认stream
      */
     public void consumeFastMQListeners0() {
-        for (FastMQListener<?> fastMQListener :
+        for (FastMQListener fastMQListener :
                 this.fastMQListeners0) {
-            //没有注解修饰的，统一采用默认的主题去消费
-            RStream<Object, Object> stream = client.getStream(FastMQConstant.DEFAULT_TOPIC);
+            _consumeFastMQListener(fastMQListener);
+        }
+    }
 
-            //执行XREADGROUP GROUP group consumer [COUNT count] [BLOCK milliseconds]  [NOACK] STREAMS key [key ...] ID [ID ...]
-            RFuture<Map<StreamMessageId, Map<Object, Object>>> future =
-                    stream.readGroupAsync(FastMQConstant.DEFAULT_CONSUMERGROUP,
-                            FastMQConstant.DEFAULT_CONSUMER,
-                            fastMQProperties.getFetchMessageSize(),
-                            StreamMessageId.NEVER_DELIVERED);
-
-            future.thenAccept(res ->
-
-                    //异步执行的后续操作
-                    fastMQService.consumeMessagesAsync(res, fastMQListener, stream, null)
-
-            ).exceptionally(exception -> {
-                //异常处理
-                log.info("consumeHealthMessages Exception:{}", exception.getMessage());
-                exception.printStackTrace();
-                return null;
-            });
-
+    private void _consumeFastMQListener(FastMQListener fastMQListener) {
+        if (fastMQProperties.getIsAsync()) {
+            fastMQAsyncService.consumeFastMQListenersAsync(fastMQListener);
+        } else {
+            fastMQService.consumeFastMQListeners(fastMQListener);
         }
     }
 
@@ -219,39 +197,16 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
      * 消费带注解的stream
      */
     public void consumeFastMQListeners1() {
-
-        for (FastMQListener<?> fastMQListener :
+        for (FastMQListener fastMQListener :
                 this.fastMQListeners1) {
-            FastMQMessageListener fastMQMessageListener = AnnotationUtils.findAnnotation(fastMQListener.getClass(), FastMQMessageListener.class);
-            RStream<Object, Object> stream = client.getStream(fastMQMessageListener.topic());
-
-            //执行XREADGROUP GROUP group consumer [COUNT count] [BLOCK milliseconds]  [NOACK] STREAMS key [key ...] ID [ID ...]
-            RFuture<Map<StreamMessageId, Map<Object, Object>>> future =
-                    stream.readGroupAsync(fastMQMessageListener.groupName(),
-                            fastMQMessageListener.consumeName(),
-                            fastMQMessageListener.readSize() == -1 ? fastMQProperties.getFetchMessageSize() : fastMQMessageListener.readSize(),
-                            StreamMessageId.NEVER_DELIVERED);
-
-            //异步执行的后续操作
-            future.thenAccept(res ->
-
-                    fastMQService.consumeMessagesAsync(res, fastMQListener, stream, fastMQMessageListener)
-
-            ).exceptionally(exception -> {
-
-                //异常处理
-                log.info("consumeHealthMessages Exception:{}", exception.getMessage());
-                exception.printStackTrace();
-                return null;
-
-            });
+            _consumeFastMQListener(fastMQListener);
         }
     }
 
 
     private void start() {
         ScheduledExecutorService service = Executors.newScheduledThreadPool(
-                fastMQProperties.getExecutor().getExecutorCoreSize(),
+                Runtime.getRuntime().availableProcessors() * 2,
                 ThreadFactoryBuilder.create()
                         .setDaemon(true)
                         .setUncaughtExceptionHandler((t, e) -> log.debug("线程:{},异常{}", t.getName(), e.getMessage()))
@@ -260,21 +215,14 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
 
         service.scheduleAtFixedRate(
                 () -> {
+                    //必须放在同一个线程里面执行，不然会出现重复消费的问题
                     consumeFastMQListeners1();
+                    checkPendingList1();
                 },
                 fastMQProperties.getExecutor().getInitialDelay(),
                 fastMQProperties.getExecutor().getPullHealthyMessagesPeriod(),
                 TimeUnit.SECONDS);
-        /**
-         * 指定消费组单独采用一个线程去执行
-         */
-        service.scheduleAtFixedRate(
-                () -> {
-                    checkPendingList1();
-                },
-                fastMQProperties.getExecutor().getInitialDelay(),
-                fastMQProperties.getExecutor().getCheckPendingListsPeriod(),
-                TimeUnit.SECONDS);
+
 
         service.scheduleAtFixedRate(
                 () -> {
@@ -284,8 +232,6 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
                 fastMQProperties.getExecutor().getInitialDelay(),
                 fastMQProperties.getExecutor().getPullHealthyMessagesPeriod(),
                 TimeUnit.SECONDS);
-
-
     }
 
 

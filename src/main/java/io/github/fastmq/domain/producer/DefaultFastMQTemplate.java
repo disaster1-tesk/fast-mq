@@ -53,7 +53,7 @@ public class DefaultFastMQTemplate implements FastMQTemplate {
     }
 
     @Override
-    public void sendMsgAsync(Long id, String topic, Object msg)  {
+    public void sendMsgAsync(Long id, String topic, Object msg) {
         _sendMsgAsync(topic, msg, id, false);
     }
 
@@ -78,9 +78,9 @@ public class DefaultFastMQTemplate implements FastMQTemplate {
         RFuture<Void> sendMessageFuture = stream.addAsync(msgId, StreamAddArgs.entries(msg).trim(TrimStrategy.MAXLEN, properties.getTrimThreshold()));
         //异常处理和日志打印工作
         sendMessageFuture
-                .thenAccept(res -> log.info("stream : {} add message:{} success", topic, msg))
+                .thenAccept(res -> log.info("主题 : {} 添加消息:{} 成功,id = {}", topic, msg, msgId))
                 .exceptionally(exception -> {
-                    log.info("stream : {} add message:{} error, exception:{}",
+                    log.info("主题 : {} 添加消息:{} 错误, 异常信息为:{}",
                             topic,
                             msg,
                             exception.getMessage());

@@ -10,12 +10,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/fast/mq")
 public class StreamResource {
 
-    @GetMapping("/stream/query/{condition}")
+    @GetMapping("/stream/query/stream")
     public HttpResult query(@PathVariable("condition") int condition) {
         return HttpResult.success("test");
     }
 
-    @GetMapping("/group/query/{condition}")
+    @GetMapping("/group/query/group")
     public HttpResult query() {
         return HttpResult.success("test");
     }

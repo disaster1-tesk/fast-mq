@@ -10,8 +10,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 /**
  * Unit test for simple App.
  */
-@SpringBootTest(classes = BaseTest.class)
+@SpringBootTest(classes = FastMQApplication.class)
 @RunWith(SpringRunner.class)
-@ComponentScan("com.fastmq")
+@ComponentScan("io.github")
 public class BaseTest {
 }

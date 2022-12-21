@@ -20,7 +20,7 @@ public class FastMQProperties {
     /**
      * 每次拉取PendingList的大小
      */
-    private Integer checkPendingListSize = 100;
+    private Integer pullPendingListSize = 100;
     /**
      * 死信门槛
      */
@@ -42,6 +42,11 @@ public class FastMQProperties {
      * 线程池配置
      */
     private Executor executor = new Executor();
+
+    /**
+     * 是否开启异步
+     */
+    private Boolean isAsync = true;
 
     @Data
     @AllArgsConstructor
