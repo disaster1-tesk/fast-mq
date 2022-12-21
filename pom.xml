@@ -12,7 +12,7 @@
 
     <groupId>io.github.disaster</groupId>
     <artifactId>fast-mq</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>${snapshot}</version>
 
     <licenses>
         <license>
@@ -39,7 +39,7 @@
         </repository>
     </distributionManagement>
 
-
+    <packaging>jar</packaging>
 
 
     <name>fast-mq</name>
@@ -68,6 +68,8 @@
     </developers>
 
     <properties>
+        <revision>1.1.0</revision>
+        <snapshot>1.0-SNAPSHOT</snapshot>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
