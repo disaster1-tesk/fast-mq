@@ -24,8 +24,18 @@
 
 ....（待续）
 
-
 ## ☀️ 快速开始（Quick Start）
+
+### 依赖 (Dependency)
+
+```java 
+##此版本还未有监控页面
+<dependency>
+  <groupId>io.github.disaster1-tesk</groupId>
+  <artifactId>fast-mq</artifactId>
+  <version>1.1.0</version>
+</dependency>
+```
 ### 队列 (Queue)
 #### 生产者 （Producer）
 注入FastMQTemplate即可使用
