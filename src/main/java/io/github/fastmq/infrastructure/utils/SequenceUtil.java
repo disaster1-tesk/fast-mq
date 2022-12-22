@@ -61,14 +61,7 @@ public class SequenceUtil {
         this.workerId = getMaxWorkerId(datacenterId, maxWorkerId);
     }
 
-    /**
-     * <p>
-     * 有参构造器
-     * </p>
-     *
-     * @param workerId     工作机器ID
-     * @param datacenterId 序列号
-     */
+
     private SequenceUtil(long workerId, long datacenterId) {
         if (workerId > maxWorkerId || workerId < 0) {
             throw new RuntimeException(String.format("worker Id can't be greater than %d or less than 0", maxWorkerId));
@@ -92,11 +85,7 @@ public class SequenceUtil {
         return instance;
     }
 
-    /**
-     * <p>
-     * 获取 maxWorkerId
-     * </p>
-     */
+
     protected static long getMaxWorkerId(long datacenterId, long maxWorkerId) {
         StringBuilder mpid = new StringBuilder();
         mpid.append(datacenterId);
@@ -113,11 +102,7 @@ public class SequenceUtil {
         return (mpid.toString().hashCode() & 0xffff) % (maxWorkerId + 1);
     }
 
-    /**
-     * <p>
-     * 数据标识id部分
-     * </p>
-     */
+
     protected static long getDatacenterId(long maxDatacenterId) {
         long id = 0L;
         try {

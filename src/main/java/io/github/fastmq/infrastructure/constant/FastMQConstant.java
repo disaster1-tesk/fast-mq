@@ -3,7 +3,9 @@ package io.github.fastmq.infrastructure.constant;
 public interface FastMQConstant {
     String PREFIX = "fastmq.config";
 
-    String DEFAULT_CONSUMERGROUP = "fast:mq:default_consumer_group";
+    String FAST_MQ_STREAM_PREFIX = "fast:mq:";
+
+    String DEFAULT_CONSUMER_GROUP = "fast:mq:default_consumer_group";
 
     String DEFAULT_CONSUMER = "fast:mq:default_consumer";
 

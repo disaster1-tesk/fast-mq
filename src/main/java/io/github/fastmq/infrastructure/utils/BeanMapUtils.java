@@ -21,18 +21,7 @@ import java.util.Map;
  */
 public final class BeanMapUtils {
 
-    /**
-     * Converts a map to a JavaBean.
-     *
-     * @param type type to convert
-     * @param map  map to convert
-     * @return JavaBean converted
-     * @throws IntrospectionException    failed to get class fields
-     * @throws IllegalAccessException    failed to instant JavaBean
-     * @throws InstantiationException    failed to instant JavaBean
-     * @throws InvocationTargetException failed to call setters
-     * @throws NoSuchMethodException     the no such method exception
-     */
+
     @SneakyThrows
     public static final Object toBean(Class<?> type, Map<Object, ? extends Object> map) {
         BeanInfo beanInfo = Introspector.getBeanInfo(type);
@@ -52,15 +41,7 @@ public final class BeanMapUtils {
     }
 
 
-    /**
-     * Converts a JavaBean to a map.
-     *
-     * @param bean JavaBean to convert
-     * @return map converted
-     * @throws IntrospectionException    failed to get class fields
-     * @throws IllegalAccessException    failed to instant JavaBean
-     * @throws InvocationTargetException failed to call setters
-     */
+
     public static final Map<String, Object> toMap(Object bean)
             throws IntrospectionException, IllegalAccessException, InvocationTargetException {
         Map<String, Object> returnMap = new HashMap<String, Object>();

@@ -3,7 +3,6 @@ package io.github.fastmq.domain.consumer.instantaneous;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 
 import java.lang.annotation.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * The interface Fast mq message listener.
@@ -21,7 +20,7 @@ public @interface FastMQMessageListener {
      *
      * @return string
      */
-    String groupName() default FastMQConstant.DEFAULT_CONSUMERGROUP;
+    String groupName() default FastMQConstant.DEFAULT_CONSUMER_GROUP;
 
     /**
      * 消费组中的消费名称，需配合消费组使用

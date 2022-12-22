@@ -20,12 +20,10 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -179,10 +177,10 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
             id = StreamMessageId.ALL;
         }
         try {
-            stream.createGroupAsync(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+            stream.createGroupAsync(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER_GROUP
                     : fastMQMessageListener.groupName(), id);
             log.info("主题 = {} ,消费组 = {} 创建成功", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_TOPIC
-                    : fastMQMessageListener.topic(), Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+                    : fastMQMessageListener.topic(), Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER_GROUP
                     : fastMQMessageListener.groupName());
         } catch (RedisBusyException e) {
             log.info(e.getMessage());
@@ -285,6 +283,7 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
                         .setUncaughtExceptionHandler((t, e) -> log.debug("线程:{},异常{}", t.getName(), e.getMessage()))
                         .setPriority(6)
                         .get());
+        log.info("stream队列处理线程池fast-mq-schedule-pool初始化完成！！");
         /**
          * 延时队列后台线程
          */
