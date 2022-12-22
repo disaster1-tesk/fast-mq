@@ -22,6 +22,7 @@
 
 ## 🌎 整体架构 （Architecture）
 
+....（待续）
 
 
 ## ☀️ 快速开始（Quick Start）
@@ -39,6 +40,7 @@ public class FastMQTemplateTest extends BaseTest {
         HashMap<String, Object> msg = Maps.newHashMap();
         msg.put("name", "disaster");
         msg.put("age", 20);
+        fastMQTemplate.sendMsgAsync("disaster_topic", msg);
         fastMQTemplate.sendMsgAsync("disaster_topic", msg);
         fastMQTemplate.sendMsgAsync(FastMQConstant.DEFAULT_TOPIC, msg);
         while (true){
@@ -82,20 +84,15 @@ public class FastMQConsumerAnnotationTest implements FastMQListener{
 #### 生产者 （Producer）
 注入FastMQTemplate即可使用
 ```java 
-public class FastMQTemplateTest extends BaseTest {
+public class FastMQDelayTemplateTest extends BaseTest {
     @Autowired
-    private FastMQTemplate fastMQTemplate;
-
+    private FastMQDelayTemplate fastMQDelayTemplate;
 
     @Test
-    public void sendMsgTest() {
-        HashMap<String, Object> msg = Maps.newHashMap();
-        msg.put("name", "disaster");
-        msg.put("age", 20);
-        fastMQTemplate.sendMsgAsync("disaster_topic", msg);
-        fastMQTemplate.sendMsgAsync(FastMQConstant.DEFAULT_TOPIC, msg);
-        while (true){
-
+    public void sendMsgTest() throws InterruptedException {
+        Thread.sleep(2000l);
+        fastMQDelayTemplate.msgEnQueue("hello", 20, null, TimeUnit.SECONDS);
+        while (true) {
         }
     }
 }
@@ -103,30 +100,27 @@ public class FastMQTemplateTest extends BaseTest {
 ```
 #### 消费者（Consumer）
 ```java 
-
 /**
- * 不使用注解，则使用框架默认的topic和consumername
- * 
+ * 不使用注解则使用框架默认队列名和线程池
  */
 @Service
 @Slf4j
-public class FastMQConsumerTest implements FastMQListener {
+public class FastMQDelayConsumerTest implements FastMQDelayListener {
     @Override
-    public void onMessage(Object o) {
-        log.info("result = {}", o);
+    public void onMessage(Object t) throws Throwable {
+        log.info("result = {}", t);
     }
 }
 
 /**
- * 使用注解可指定topic和consumername，同时还支持接口幂等处理
- * 
+ * 使用注解可自定义队列名称与线程池
  */
+@FastMQDelayMessageListener(queueName = "test",executorName = "test_executor")
 @Service
-@FastMQMessageListener(idempotent = true,groupName = "disaster",consumeName = "disaster1",topic = "disaster_topic", readSize = 0)
 @Slf4j
-public class FastMQConsumerAnnotationTest implements FastMQListener{
+public class FastMQDelayConsumerAnnotationTest implements FastMQDelayListener {
     @Override
-    public void onMessage(Object t) {
+    public void onMessage(Object t) throws Throwable {
         log.info("result = {}", t);
     }
 }
@@ -163,28 +157,33 @@ redisson:
 
 ```
 fastmq:
-  redis:
+  config:
+    enable: false
     # 每次拉取数据的量
     fetchMessageSize: 5
     #每次拉取PendingList的大小
-    checkPendingListSize: 1000
-    #死信门槛（计次器次数）
+    pullPendingListSize: 1000
+    #死信门槛（秒）
     deadLetterThreshold: 32
     #是否从头开始订阅消息
     isStartFromHead: true
     #超过了该长度stream前面部分会被持久化（非严格模式——MAXLEN~）
     trimThreshold: 10000
+    #是否是异步
+    isAsync: false
     executor:
       #拉取信息的周期(单位秒)
       checkPendingListsPeriod: 10
       #检查PendingList周期(单位秒)
       pullHealthyMessagesPeriod: 1
-      #线程池的核心线程数
-      executorCoreSize: 16
       time-unit: seconds
+      #第一次延迟执行的时间
+      initial-delay: 1
+      #线程池的核心线程数，同步时调此参数能有效提高效率，如果采用的是异步消费的方式，使用默认配置即可
+      executor-core-size: 20
     claim:
       #认领门槛(单位毫秒)
-      claimThreshold: 3600
+      claimThreshold: 20
       time-unit: milliseconds
     idle:
       #检查consumer不活跃的门槛（单位秒）
