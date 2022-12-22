@@ -1,15 +1,12 @@
 package io.github.fastmq.domain.service.impl;
 
-import io.github.fastmq.domain.consumer.FastMQListener;
-import io.github.fastmq.domain.consumer.FastMQMessageListener;
+import io.github.fastmq.domain.consumer.instantaneous.FastMQListener;
+import io.github.fastmq.domain.consumer.instantaneous.FastMQMessageListener;
 import io.github.fastmq.domain.service.FastMQService;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.prop.FastMQProperties;
-import io.github.fastmq.infrastructure.utils.BeanMapUtils;
-import io.github.fastmq.infrastructure.utils.SystemClock;
 import io.github.fastmq.infrastructure.utils.ThreadPoolUtil;
 import io.netty.util.internal.StringUtil;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.*;
 import org.redisson.api.stream.StreamAddArgs;
@@ -65,7 +62,11 @@ public class FastMQServiceImpl implements FastMQService {
                 filter(row -> !idleIds.contains(row.getKey())).
                 collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         if (!CollectionUtils.isEmpty(messages)) {
-            log.info("开始重新消费数据: {}", messages);
+            log.info("消费组 = {},消费名称 = {},id = {},开始重新消费数据: {}", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+                            : fastMQMessageListener.groupName(),
+                    Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
+                            : fastMQMessageListener.consumeName()
+                    , messages.keySet(), messages);
         }
         consumeMessages(messages, fastMQListener, stream, fastMQMessageListener);
 
@@ -80,7 +81,7 @@ public class FastMQServiceImpl implements FastMQService {
                 : fastMQMessageListener.topic());
 
         //获取死信流
-        deadStream = client.getStream(FastMQConstant.DEAD_STREAM);
+        deadStream = client.getStream(FastMQConstant.DEFAULT_DEAD_STREAM);
         for (StreamMessageId id :
                 deadLetterIds) {
             //通过XRANGE streamName 1624516905844-0 1624516905844-0  通过ID获取每一条消息的详细内容
@@ -96,13 +97,13 @@ public class FastMQServiceImpl implements FastMQService {
                 long ack = stream.ack(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
                         : fastMQMessageListener.groupName(), id);
                 if (ack == 1) {
-                    log.info("消费组 = {}:消费名称 = {}:id = {} 死信移除成功", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+                    log.info("消费组 = {},消费名称 = {},id = {} 死信移除成功", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
                                     : fastMQMessageListener.groupName(),
                             Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
                                     : fastMQMessageListener.consumeName()
                             , id);
                 } else {
-                    log.info("消费组 = {}:消费名称 = {}:id = {} 死信移除失败", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+                    log.info("消费组 = {},消费名称 = {},id = {} 死信移除失败", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
                                     : fastMQMessageListener.groupName(),
                             Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
                                     : fastMQMessageListener.consumeName()
@@ -218,7 +219,7 @@ public class FastMQServiceImpl implements FastMQService {
                         : fastMQMessageListener.groupName(),
                 Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
                         : fastMQMessageListener.consumeName(),
-                fastMQMessageListener.readSize() == -1 ? fastMQProperties.getFetchMessageSize() : fastMQMessageListener.readSize(),
+                fastMQMessageListener.readSize() == -1 ? fastMQProperties.getFetchMessageSize() : fastMQMessageListener.readSize() - 1,
                 StreamMessageId.NEVER_DELIVERED);
 
 
@@ -228,26 +229,17 @@ public class FastMQServiceImpl implements FastMQService {
     }
 
     private void consumeMessage(StreamMessageId id, Map<Object, Object> dtoMap, FastMQListener fastMQListener, RStream<Object, Object> stream, FastMQMessageListener fastMQMessageListener) {
-        String lockName = Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP + ":" + id.toString()
-                : fastMQMessageListener.groupName() + ":" + id.toString();
-        RLock lock = client.getLock(lockName);
         //如果操作是幂等的则不需要加分布式锁
         if (Objects.nonNull(fastMQMessageListener) && fastMQMessageListener.idempotent()) {
             ThreadPoolUtil.run(() -> {
                 //消费端逻辑回调
-                fastMQListener.onMessage(dtoMap);
-                if (Objects.isNull(fastMQMessageListener)) {
-                    //ACK机制，比pubsub优秀
-                    long ack = stream.ack(FastMQConstant.DEFAULT_CONSUMERGROUP, id);
-                    printAckLog(id, fastMQMessageListener, ack);
-
-                } else {
-                    long ack = stream.ack(fastMQMessageListener.groupName(), id);
-                    printAckLog(id, fastMQMessageListener, ack);
-                }
+                _onMessage(id, dtoMap, fastMQListener, stream, fastMQMessageListener);
             });
         } else {
-            ThreadPoolUtil.run(()->{
+            ThreadPoolUtil.run(() -> {
+                String lockName = Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP + ":" + id.toString()
+                        : fastMQMessageListener.groupName() + ":" + id.toString();
+                RLock lock = client.getLock(lockName);
                 try {
                     //分布式锁保证分布式环境下的原子性
                     boolean b = lock.tryLock(100, 10, TimeUnit.SECONDS);
@@ -257,14 +249,7 @@ public class FastMQServiceImpl implements FastMQService {
                         String bucketRes = bucket.get();
                         if (StringUtil.isNullOrEmpty(bucketRes)) {
                             //消费端逻辑回调
-                            fastMQListener.onMessage(dtoMap);
-                            if (Objects.isNull(fastMQMessageListener)) {
-                                long ack = stream.ack(FastMQConstant.DEFAULT_CONSUMERGROUP, id);
-                                printAckLog(id, fastMQMessageListener, ack);
-                            } else {
-                                long ack = stream.ack(fastMQMessageListener.groupName(), id);
-                                printAckLog(id, fastMQMessageListener, ack);
-                            }
+                            _onMessage(id, dtoMap, fastMQListener, stream, fastMQMessageListener);
                             bucket.set("consumed");
                             bucket.expire(30, TimeUnit.MINUTES);
                         }
@@ -278,6 +263,29 @@ public class FastMQServiceImpl implements FastMQService {
             });
         }
 
+    }
+
+    private void _onMessage(StreamMessageId id, Map<Object, Object> dtoMap, FastMQListener fastMQListener, RStream<Object, Object> stream, FastMQMessageListener fastMQMessageListener) {
+        try {
+            fastMQListener.onMessage(dtoMap);
+            if (Objects.isNull(fastMQMessageListener)) {
+                //ACK机制，比pubsub优秀
+                stream.ackAsync(FastMQConstant.DEFAULT_CONSUMERGROUP, id).thenAccept(ack -> {
+                    printAckLog(id, fastMQMessageListener, ack);
+                });
+            } else {
+                stream.ackAsync(fastMQMessageListener.groupName(), id).thenAccept(ack -> {
+                    printAckLog(id, fastMQMessageListener, ack);
+                });
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+            log.error("消费组 = {}，消费名称 = {}，id = {} 逻辑回调处理异常，消息消费失败！！",Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+                            : fastMQMessageListener.groupName(),
+                    Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
+                            : fastMQMessageListener.consumeName()
+                    , id);
+        }
     }
 
     private void printAckLog(StreamMessageId id, FastMQMessageListener fastMQMessageListener, long ack) {
@@ -296,16 +304,4 @@ public class FastMQServiceImpl implements FastMQService {
         }
     }
 
-
-    private String getRandConsumerName(Map<String, Long> consumerNames, FastMQMessageListener fastMQMessageListener) {
-        //过滤掉原有的consumerName
-        List<Map.Entry<String, Long>> entries = consumerNames.entrySet().stream()
-                .filter(entry -> !entry.getKey().equals(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
-                        : fastMQMessageListener.consumeName()))
-                .collect(Collectors.toList());
-        //随机一个消费者进行消费：后期可以采用多策略去完成此工作
-        Random rand = new Random();
-        int i = rand.nextInt(entries.size());
-        return entries.get(i).getKey();
-    }
 }

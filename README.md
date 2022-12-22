@@ -5,6 +5,7 @@
 
 ## 🔥特性（Features）
 - 🚀 开箱即用
+- 🍄 延时队列
 - 🔆 ACK机制
 - 📦 异步通信
 - 🎨 消息故障修复
@@ -14,7 +15,7 @@
 - 🪐 支持redis单机、主从、集群
 - ..........（待续）
 ## 🖥 环境要求 （Environment Required）
-- redis v5.0.0+
+- redis v6.0.0+
 - springboot v2.6.5
 - jdk 1.8+
 - ......
@@ -24,8 +25,8 @@
 
 
 ## ☀️ 快速开始（Quick Start）
-
-### 生产者 （Producer）
+### 队列 (Queue)
+#### 生产者 （Producer）
 注入FastMQTemplate即可使用
 ```java 
 public class FastMQTemplateTest extends BaseTest {
@@ -47,7 +48,60 @@ public class FastMQTemplateTest extends BaseTest {
 }
 
 ```
-### 消费者（Consumer）
+#### 消费者（Consumer）
+```java 
+
+/**
+ * 不使用注解，则使用框架默认的topic和consumername
+ * 
+ */
+@Service
+@Slf4j
+public class FastMQConsumerTest implements FastMQListener {
+    @Override
+    public void onMessage(Object o) {
+        log.info("result = {}", o);
+    }
+}
+
+/**
+ * 使用注解可指定topic和consumername，同时还支持接口幂等处理
+ * 
+ */
+@Service
+@FastMQMessageListener(idempotent = true,groupName = "disaster",consumeName = "disaster1",topic = "disaster_topic", readSize = 0)
+@Slf4j
+public class FastMQConsumerAnnotationTest implements FastMQListener{
+    @Override
+    public void onMessage(Object t) {
+        log.info("result = {}", t);
+    }
+}
+```
+### 延时队列 （Delay Queue）
+#### 生产者 （Producer）
+注入FastMQTemplate即可使用
+```java 
+public class FastMQTemplateTest extends BaseTest {
+    @Autowired
+    private FastMQTemplate fastMQTemplate;
+
+
+    @Test
+    public void sendMsgTest() {
+        HashMap<String, Object> msg = Maps.newHashMap();
+        msg.put("name", "disaster");
+        msg.put("age", 20);
+        fastMQTemplate.sendMsgAsync("disaster_topic", msg);
+        fastMQTemplate.sendMsgAsync(FastMQConstant.DEFAULT_TOPIC, msg);
+        while (true){
+
+        }
+    }
+}
+
+```
+#### 消费者（Consumer）
 ```java 
 
 /**

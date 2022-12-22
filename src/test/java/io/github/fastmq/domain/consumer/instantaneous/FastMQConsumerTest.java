@@ -1,5 +1,6 @@
-package io.github.fastmq.domain.consumer;
+package io.github.fastmq.domain.consumer.instantaneous;
 
+import io.github.fastmq.domain.consumer.instantaneous.FastMQListener;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

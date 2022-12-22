@@ -1,6 +1,7 @@
 package io.github.fastmq.domain.producer;
 
 import io.github.fastmq.BaseTest;
+import io.github.fastmq.domain.producer.instantaneous.FastMQTemplate;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import com.google.common.collect.Maps;
 import org.junit.Test;

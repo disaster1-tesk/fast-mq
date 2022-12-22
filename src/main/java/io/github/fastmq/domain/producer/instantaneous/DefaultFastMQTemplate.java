@@ -1,4 +1,4 @@
-package io.github.fastmq.domain.producer;
+package io.github.fastmq.domain.producer.instantaneous;
 
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.prop.FastMQProperties;
@@ -78,7 +78,7 @@ public class DefaultFastMQTemplate implements FastMQTemplate {
         RFuture<Void> sendMessageFuture = stream.addAsync(msgId, StreamAddArgs.entries(msg).trim(TrimStrategy.MAXLEN, properties.getTrimThreshold()));
         //异常处理和日志打印工作
         sendMessageFuture
-                .thenAccept(res -> log.info("主题 : {} 添加消息:{} 成功,id = {}", topic, msg, msgId))
+                .thenAccept(res -> log.info("主题 : {} 添加消息: {} 成功,id = {}", topic, msg, msgId))
                 .exceptionally(exception -> {
                     log.info("主题 : {} 添加消息:{} 错误, 异常信息为:{}",
                             topic,

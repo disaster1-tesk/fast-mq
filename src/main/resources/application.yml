@@ -12,12 +12,13 @@ redisson:
 #    deployment: cluster
 
 fastmq:
-  redis:
+  config:
+    enable: false
     # 每次拉取数据的量
     fetchMessageSize: 5
     #每次拉取PendingList的大小
     pullPendingListSize: 1000
-    #死信门槛（次数）
+    #死信门槛（秒）
     deadLetterThreshold: 32
     #是否从头开始订阅消息
     isStartFromHead: true
@@ -33,7 +34,7 @@ fastmq:
       time-unit: seconds
       #第一次延迟执行的时间
       initial-delay: 1
-      #线程池的核心线程数，同步时调此参数能有效提高效率
+      #线程池的核心线程数，同步时调此参数能有效提高效率，如果采用的是异步消费的方式，使用默认配置即可
       executor-core-size: 20
     claim:
       #认领门槛(单位毫秒)

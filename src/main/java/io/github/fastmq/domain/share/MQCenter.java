@@ -1,7 +1,9 @@
 package io.github.fastmq.domain.share;
 
-import io.github.fastmq.domain.consumer.FastMQListener;
-import io.github.fastmq.domain.consumer.FastMQMessageListener;
+import io.github.fastmq.domain.consumer.delay.FastMQDelayListener;
+import io.github.fastmq.domain.consumer.delay.FastMQDelayMessageListener;
+import io.github.fastmq.domain.consumer.instantaneous.FastMQListener;
+import io.github.fastmq.domain.consumer.instantaneous.FastMQMessageListener;
 import io.github.fastmq.domain.service.FastMQAsyncService;
 import io.github.fastmq.domain.service.FastMQService;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
@@ -18,15 +20,17 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * mq的事件处理中心
@@ -50,6 +54,11 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
      * 存放有注解修饰的监听器
      */
     private Set<FastMQListener> fastMQListeners1;
+
+    /**
+     * 存放延时注解修饰的监听器
+     */
+    private Set<FastMQDelayListener> fastMQListeners2;
 
 
     /**
@@ -83,12 +92,35 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
 
     private ScheduledExecutorService service = null;
 
+    private static String luaStr;
+
+    static {
+        StringBuilder sb = new StringBuilder();
+        sb.append("local zkey = KEYS[1]\n")
+                .append("local maxsco = ARGV[1]\n")
+                .append("local zrange = redis.call('zrangebyscore',zkey,0,maxsco,'LIMIT',0,1)\n")
+                .append("if next(zrange) ~= nil and #zrange > 0\n")
+                .append("then\n")
+                .append("\tlocal rmnum = redis.call('zrem',zkey,unpack(zrange))\n")
+                .append("\tif(rmnum > 0)\n")
+                .append("\tthen\n")
+                .append("\t\treturn zrange\n")
+                .append("\tend\n")
+                .append("else\n")
+                .append("\treturn {}\n")
+                .append("end\n")
+        ;
+
+        luaStr = sb.toString();
+    }
+
     /**
      * Instantiates a new Mq center.
      */
     public MQCenter() {
         fastMQListeners0 = new HashSet<>();
         fastMQListeners1 = new HashSet<>();
+        fastMQListeners2 = new HashSet<>();
     }
 
     @PostConstruct
@@ -111,18 +143,29 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        Map<String, FastMQListener> beansOfType = applicationContext.getBeansOfType(FastMQListener.class);
-        for (Map.Entry<String, FastMQListener> entry : beansOfType.entrySet()) {
-            FastMQListener value = entry.getValue();
-            Class aClass = value.getClass();
-            if (aClass.isAnnotationPresent(FastMQMessageListener.class)) {
-                fastMQListeners1.add(value);
-            } else {
-                fastMQListeners0.add(value);
+        if (fastMQProperties.getEnable()) {
+            Map<String, FastMQListener> fastMQListenerMap = applicationContext.getBeansOfType(FastMQListener.class);
+            Map<String, FastMQDelayListener> fastMQDelayListenerMap = applicationContext.getBeansOfType(FastMQDelayListener.class);
+            for (Map.Entry<String, FastMQDelayListener> delayListenerEntry : fastMQDelayListenerMap.entrySet()) {
+                fastMQListeners2.add(delayListenerEntry.getValue());
             }
-            createConsumerGroup(value);
+            for (Map.Entry<String, FastMQListener> listenerEntry : fastMQListenerMap.entrySet()) {
+                FastMQListener value = listenerEntry.getValue();
+                Class aClass = value.getClass();
+                if (aClass.isAnnotationPresent(FastMQMessageListener.class)) {
+                    fastMQListeners1.add(value);
+                } else {
+                    fastMQListeners0.add(value);
+                }
+                createConsumerGroup(value);
+            }
+            start();
+        } else {
+            log.info(
+                    "\nfastmq:\n" +
+                            "  config:\n" +
+                            "    enable=" + false);
         }
-        start();
     }
 
     private void createConsumerGroup(FastMQListener fastMQListener) {
@@ -138,7 +181,8 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
         try {
             stream.createGroupAsync(Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
                     : fastMQMessageListener.groupName(), id);
-            log.info("消费组{}创建成功", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
+            log.info("主题 = {} ,消费组 = {} 创建成功", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_TOPIC
+                    : fastMQMessageListener.topic(), Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMERGROUP
                     : fastMQMessageListener.groupName());
         } catch (RedisBusyException e) {
             log.info(e.getMessage());
@@ -203,16 +247,54 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
         }
     }
 
+    /**
+     * 消费延时队列
+     */
+    public void consumeFastMQListeners2() {
+        for (FastMQDelayListener fastMQDelayListener : fastMQListeners2) {
+            Class<? extends FastMQDelayListener> aClass = fastMQDelayListener.getClass();
+            FastMQDelayMessageListener annotation = aClass.getAnnotation(FastMQDelayMessageListener.class);
+            String key = Objects.nonNull(annotation) && StringUtils.hasText(annotation.queueName()) ? annotation.queueName() : FastMQConstant.DEFAULT_DElAY_QUEUE;
+            String executorName = annotation.executorName();
+            RBlockingDeque<Object> blockingDeque = client.getBlockingDeque(key);
+            client.getDelayedQueue(blockingDeque);
+            Executor bean = applicationContext.getBean(executorName, Executor.class);
+            bean.execute(() -> {
+                while (true) {
+                    try {
+                        Object take = blockingDeque.take();
+                        log.info("开始消费延迟队列{}:消息内容{}", key, take);
+                        fastMQDelayListener.onMessage(take);
+                        TimeUnit.MILLISECONDS.sleep(500);
+                    } catch (Throwable throwable) {
+                        log.error("fast-mq 延迟队列监测异常中断 {}", throwable.getMessage());
+                    }
+                }
+            });
+        }
+    }
+
 
     private void start() {
+
         ScheduledExecutorService service = Executors.newScheduledThreadPool(
                 Runtime.getRuntime().availableProcessors() * 2,
                 ThreadFactoryBuilder.create()
+                        .setNameFormat("fast-mq-schedule-pool-%d")
                         .setDaemon(true)
                         .setUncaughtExceptionHandler((t, e) -> log.debug("线程:{},异常{}", t.getName(), e.getMessage()))
                         .setPriority(6)
                         .get());
+        /**
+         * 延时队列后台线程
+         */
+        service.schedule(() -> {
+            consumeFastMQListeners2();
+        }, 0, TimeUnit.MILLISECONDS);
 
+        /**
+         * 指定消费组的消费者后台线程
+         */
         service.scheduleAtFixedRate(
                 () -> {
                     //必须放在同一个线程里面执行，不然会出现重复消费的问题
@@ -223,7 +305,9 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
                 fastMQProperties.getExecutor().getPullHealthyMessagesPeriod(),
                 TimeUnit.SECONDS);
 
-
+        /**
+         * 默认消费组的消费者后台线程
+         */
         service.scheduleAtFixedRate(
                 () -> {
                     consumeFastMQListeners0();

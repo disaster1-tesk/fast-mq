@@ -1,4 +1,4 @@
-package io.github.fastmq.domain.consumer;
+package io.github.fastmq.domain.consumer.instantaneous;
 
 import lombok.SneakyThrows;
 
@@ -14,6 +14,5 @@ public interface FastMQListener {
      *
      * @param t the t
      */
-
-    void onMessage(Object t);
+    void onMessage(Object t) throws Throwable;
 }

@@ -1,4 +1,4 @@
-package io.github.fastmq.domain.producer;
+package io.github.fastmq.domain.producer.instantaneous;
 
 
 import org.springframework.lang.NonNull;

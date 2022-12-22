@@ -1,7 +1,7 @@
 package io.github.fastmq.domain.service;
 
-import io.github.fastmq.domain.consumer.FastMQListener;
-import io.github.fastmq.domain.consumer.FastMQMessageListener;
+import io.github.fastmq.domain.consumer.instantaneous.FastMQListener;
+import io.github.fastmq.domain.consumer.instantaneous.FastMQMessageListener;
 import org.redisson.api.RStream;
 import org.redisson.api.StreamMessageId;
 
@@ -14,7 +14,7 @@ import java.util.Set;
  * @author disaster
  * @version 1.0
  */
-public interface FastMQAsyncService {
+public interface FastMQAsyncService extends MQService{
     /**
      * 异步消费空闲超时信息进行重传
      *

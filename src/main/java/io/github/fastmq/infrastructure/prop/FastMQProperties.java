@@ -10,6 +10,10 @@ import java.util.concurrent.TimeUnit;
 @ConfigurationProperties(prefix = FastMQConstant.PREFIX)
 public class FastMQProperties {
     /**
+     * 是否启动fastmq
+     */
+    private Boolean enable;
+    /**
      * 每次拉取数据的量--全局设置，消费者也可通过注解定制化
      */
     private Integer fetchMessageSize = 5;
