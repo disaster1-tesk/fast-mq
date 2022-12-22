@@ -10,7 +10,7 @@
         <version>2.6.5</version>
     </parent>
 
-    <groupId>io.github.disaster1-tesk</groupId>
+    <groupId>io.github.disaster</groupId>
     <artifactId>fast-mq</artifactId>
     <version>${revision}</version>
 
