@@ -95,14 +95,14 @@ public class FastMQProperties {
          */
         private Integer executorCoreSize = Runtime.getRuntime().availableProcessors() * 2;
         /**
-         * 拉取信息的周期
+         * 拉取默认主题信息的周期(毫秒)
          */
-        private Integer pullHealthyMessagesPeriod = 1;
+        private Integer pullDefaultTopicMessagesPeriod = 1000;
 
         /**
-         * 检查PendingList周期
+         * 拉取指定主题信息的周期(毫秒)
          */
-        private Integer checkPendingListsPeriod = 10;
+        private Integer pullTopicMessagesPeriod = 1000;
 
         /**
          * 第一次延迟执行的时间

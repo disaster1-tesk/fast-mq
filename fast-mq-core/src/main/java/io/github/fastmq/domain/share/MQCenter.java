@@ -8,6 +8,7 @@ import io.github.fastmq.domain.service.FastMQAsyncService;
 import io.github.fastmq.domain.service.FastMQService;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.prop.FastMQProperties;
+import io.github.fastmq.infrastructure.utils.BeanMapUtils;
 import io.github.fastmq.infrastructure.utils.ThreadPoolUtil;
 import jodd.util.concurrent.ThreadFactoryBuilder;
 import lombok.Data;
@@ -20,6 +21,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -121,8 +123,8 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
         fastMQListeners2 = new HashSet<>();
     }
 
-    @PostConstruct
-    public void init() {
+
+    private void initThreadPool() {
         service = Executors.newScheduledThreadPool(
                 fastMQProperties.getExecutor().getExecutorCoreSize(),
                 ThreadFactoryBuilder.create()
@@ -142,6 +144,7 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         if (fastMQProperties.getEnable()) {
+            initThreadPool();
             Map<String, FastMQListener> fastMQListenerMap = applicationContext.getBeansOfType(FastMQListener.class);
             Map<String, FastMQDelayListener> fastMQDelayListenerMap = applicationContext.getBeansOfType(FastMQDelayListener.class);
             for (Map.Entry<String, FastMQDelayListener> delayListenerEntry : fastMQDelayListenerMap.entrySet()) {
@@ -159,10 +162,10 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
             }
             start();
         } else {
-            log.info(
+            log.info("您当前未启动fast-mq" +
                     "\nfastmq:\n" +
-                            "  config:\n" +
-                            "    enable=" + false);
+                    "  config:\n" +
+                    "    enable=" + false);
         }
     }
 
@@ -258,14 +261,23 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
             client.getDelayedQueue(blockingDeque);
             Executor bean = applicationContext.getBean(executorName, Executor.class);
             bean.execute(() -> {
-                while (true) {
+                while (!Thread.interrupted()) {
+                    String take = null;
                     try {
-                        Object take = blockingDeque.take();
+                        take = (String) blockingDeque.take();
+                    } catch (InterruptedException e) {
+                        log.info("延时队列消费失败");
+                    }
+                    if (Objects.nonNull(take)){
                         log.info("开始消费延迟队列{}:消息内容{}", key, take);
-                        fastMQDelayListener.onMessage(take);
-                        TimeUnit.MILLISECONDS.sleep(500);
-                    } catch (Throwable throwable) {
-                        log.error("fast-mq 延迟队列监测异常中断 {}", throwable.getMessage());
+                        try {
+                            fastMQDelayListener.onMessage(BeanMapUtils.toBean(fastMQDelayListener.getClass(), take));
+                            TimeUnit.MILLISECONDS.sleep(500);
+                        } catch (Throwable e) {
+                            log.info("延时队列逻辑执行失败！！");
+                        }finally {
+                            log.info("消费逻辑执行失败");
+                        }
                     }
                 }
             });
@@ -274,22 +286,13 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
 
 
     private void start() {
-
-        ScheduledExecutorService service = Executors.newScheduledThreadPool(
-                Runtime.getRuntime().availableProcessors() * 2,
-                ThreadFactoryBuilder.create()
-                        .setNameFormat("fast-mq-schedule-pool-%d")
-                        .setDaemon(true)
-                        .setUncaughtExceptionHandler((t, e) -> log.debug("线程:{},异常{}", t.getName(), e.getMessage()))
-                        .setPriority(6)
-                        .get());
         log.info("stream队列处理线程池fast-mq-schedule-pool初始化完成！！");
         /**
          * 延时队列后台线程
          */
         service.schedule(() -> {
             consumeFastMQListeners2();
-        }, 0, TimeUnit.MILLISECONDS);
+        }, 5, TimeUnit.MILLISECONDS);
 
         /**
          * 指定消费组的消费者后台线程
@@ -301,8 +304,8 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
                     checkPendingList1();
                 },
                 fastMQProperties.getExecutor().getInitialDelay(),
-                fastMQProperties.getExecutor().getPullHealthyMessagesPeriod(),
-                TimeUnit.SECONDS);
+                fastMQProperties.getExecutor().getPullTopicMessagesPeriod(),
+                fastMQProperties.getExecutor().getTimeUnit());
 
         /**
          * 默认消费组的消费者后台线程
@@ -313,8 +316,8 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
                     checkPendingList0();
                 },
                 fastMQProperties.getExecutor().getInitialDelay(),
-                fastMQProperties.getExecutor().getPullHealthyMessagesPeriod(),
-                TimeUnit.SECONDS);
+                fastMQProperties.getExecutor().getPullDefaultTopicMessagesPeriod(),
+                fastMQProperties.getExecutor().getTimeUnit());
     }
 
 

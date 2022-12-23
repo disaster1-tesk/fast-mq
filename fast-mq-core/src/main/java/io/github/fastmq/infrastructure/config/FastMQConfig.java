@@ -32,7 +32,7 @@ public class FastMQConfig {
      * @param redissonProperties the redisson properties
      * @return the redisson client
      */
-    @Bean
+    @Bean(destroyMethod = "shutdown")
     @ConditionalOnBean(RedissonProperties.class)
     public RedissonClient redissonClient(RedissonProperties redissonProperties) {
         RedissonProperties.Deployment deployment = redissonProperties.getDeployment();

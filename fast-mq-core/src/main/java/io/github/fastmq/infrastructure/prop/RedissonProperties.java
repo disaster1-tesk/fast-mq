@@ -15,12 +15,12 @@ public class RedissonProperties {
     /**
      * redis主机地址
      */
-    private String host;
+    private String host = "127.0.0.1";
 
     /**
      * PORT
      */
-    private String port;
+    private String port = "6379";
 
     /**
      * 连接类型，支持stand-alone-单机节点，sentinel-哨兵，cluster-集群，master-slave-主从
@@ -30,12 +30,12 @@ public class RedissonProperties {
     /**
      * redis 连接密码
      */
-    private String password;
+    private String password = "";
 
     /**
      * 选取那个数据库
      */
-    private String database;
+    private String database = "0";
 
     /**
      * 节点信息

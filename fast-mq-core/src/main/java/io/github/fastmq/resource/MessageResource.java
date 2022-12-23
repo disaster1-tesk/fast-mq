@@ -3,7 +3,6 @@ package io.github.fastmq.resource;
 import io.github.fastmq.domain.producer.delay.FastMQDelayTemplate;
 import io.github.fastmq.domain.producer.instantaneous.FastMQTemplate;
 import io.github.fastmq.infrastructure.http.HttpResult;
-import org.assertj.core.util.Lists;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
@@ -34,7 +33,7 @@ public class MessageResource extends BaseResource {
 
     @PostMapping("/addDelayMsg")
     public HttpResult addDelayMsg(@RequestParam("topic") String topic, @RequestParam("delayTime") long delayTime, @RequestBody Map msg) {
-        fastMQDelayTemplate.msgEnQueue(msg, delayTime, appendPrefix(topic), TimeUnit.SECONDS);
+        fastMQDelayTemplate.sendMsg(msg, delayTime, appendPrefix(topic), TimeUnit.SECONDS);
         return HttpResult.success("发送成功");
     }
 

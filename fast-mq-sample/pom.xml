@@ -31,11 +31,15 @@
         <dependency>
             <groupId>io.github.disaster1-tesk</groupId>
             <artifactId>fast-mq-core</artifactId>
-            <version>${revision}</version>
+            <version>${snapshot}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
     </dependencies>
 

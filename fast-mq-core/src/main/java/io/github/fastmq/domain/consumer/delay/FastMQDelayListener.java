@@ -6,12 +6,12 @@ package io.github.fastmq.domain.consumer.delay;
  * @author disaster
  * @version 1.0
  */
-public interface FastMQDelayListener {
+public interface FastMQDelayListener<T> {
     /**
      * On message.
      *
      * @param t the t
      * @throws Throwable the throwable
      */
-    void onMessage(Object t) throws Throwable;
+    void onMessage(T t) throws Throwable;
 }

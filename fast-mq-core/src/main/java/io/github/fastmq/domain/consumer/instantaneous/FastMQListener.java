@@ -1,6 +1,6 @@
 package io.github.fastmq.domain.consumer.instantaneous;
 
-import lombok.SneakyThrows;
+
 
 /**
  * The interface Fast mq listener.
@@ -8,7 +8,7 @@ import lombok.SneakyThrows;
  * @author disaster
  * @version 1.0
  */
-public interface FastMQListener {
+public interface FastMQListener<T> {
 
-    void onMessage(Object t) throws Throwable;
+    void onMessage(T t) throws Throwable;
 }

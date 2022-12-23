@@ -53,6 +53,7 @@
 
     <properties>
         <revision>1.2.0</revision>
+        <snapshot>1.0-SNAPSHOT</snapshot>
         <flatten-maven-plugin.version>1.2.7</flatten-maven-plugin.version>
         <maven-gpg-plugin.version>3.0.1</maven-gpg-plugin.version>
     </properties>

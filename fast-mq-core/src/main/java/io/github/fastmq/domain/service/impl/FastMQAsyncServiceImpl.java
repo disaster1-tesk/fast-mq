@@ -5,6 +5,7 @@ import io.github.fastmq.domain.consumer.instantaneous.FastMQMessageListener;
 import io.github.fastmq.domain.service.FastMQAsyncService;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.prop.FastMQProperties;
+import io.github.fastmq.infrastructure.utils.BeanMapUtils;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.*;
@@ -248,7 +249,7 @@ public class FastMQAsyncServiceImpl implements FastMQAsyncService {
                                 : fastMQMessageListener.groupName(),
                         Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
                                 : fastMQMessageListener.consumeName(),
-                        fastMQMessageListener.readSize() == -1 ? fastMQProperties.getFetchMessageSize() : fastMQMessageListener.readSize() - 1,
+                        Objects.nonNull(fastMQMessageListener) && fastMQMessageListener.readSize() >= -1 ? fastMQMessageListener.readSize(): fastMQProperties.getFetchMessageSize(),
                         StreamMessageId.NEVER_DELIVERED);
 
         //异步执行的后续操作
@@ -307,7 +308,7 @@ public class FastMQAsyncServiceImpl implements FastMQAsyncService {
 
     private void _onMessage(StreamMessageId id, Map<Object, Object> dtoMap, FastMQListener fastMQListener, RStream<Object, Object> stream, FastMQMessageListener fastMQMessageListener) {
         try {
-            fastMQListener.onMessage(dtoMap);
+            fastMQListener.onMessage(BeanMapUtils.toBean(fastMQListener.getClass(),dtoMap));
             if (Objects.isNull(fastMQMessageListener)) {
                 //ACK机制，比pubsub优秀
                 stream.ackAsync(FastMQConstant.DEFAULT_CONSUMER_GROUP, id).thenAccept(ack -> {
@@ -320,7 +321,7 @@ public class FastMQAsyncServiceImpl implements FastMQAsyncService {
             }
         } catch (Throwable e) {
             e.printStackTrace();
-            log.error("消费组 = {}，消费名称 = {}，id = {} 逻辑回调处理异常，消息消费失败！！",Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER_GROUP
+            log.error("消费组 = {}，消费名称 = {}，id = {} 逻辑回调处理异常，消息消费失败！！", Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER_GROUP
                             : fastMQMessageListener.groupName(),
                     Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
                             : fastMQMessageListener.consumeName()

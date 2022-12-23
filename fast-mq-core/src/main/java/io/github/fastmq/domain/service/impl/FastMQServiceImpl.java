@@ -5,6 +5,7 @@ import io.github.fastmq.domain.consumer.instantaneous.FastMQMessageListener;
 import io.github.fastmq.domain.service.FastMQService;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.prop.FastMQProperties;
+import io.github.fastmq.infrastructure.utils.BeanMapUtils;
 import io.github.fastmq.infrastructure.utils.ThreadPoolUtil;
 import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -219,7 +220,7 @@ public class FastMQServiceImpl implements FastMQService {
                         : fastMQMessageListener.groupName(),
                 Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER
                         : fastMQMessageListener.consumeName(),
-                fastMQMessageListener.readSize() == -1 ? fastMQProperties.getFetchMessageSize() : fastMQMessageListener.readSize() - 1,
+                Objects.nonNull(fastMQMessageListener) && fastMQMessageListener.readSize() >= -1 ? fastMQMessageListener.readSize(): fastMQProperties.getFetchMessageSize(),
                 StreamMessageId.NEVER_DELIVERED);
 
 
@@ -267,7 +268,7 @@ public class FastMQServiceImpl implements FastMQService {
 
     private void _onMessage(StreamMessageId id, Map<Object, Object> dtoMap, FastMQListener fastMQListener, RStream<Object, Object> stream, FastMQMessageListener fastMQMessageListener) {
         try {
-            fastMQListener.onMessage(dtoMap);
+            fastMQListener.onMessage(BeanMapUtils.toBean(fastMQListener.getClass(),dtoMap));
             if (Objects.isNull(fastMQMessageListener)) {
                 //ACK机制，比pubsub优秀
                 stream.ackAsync(FastMQConstant.DEFAULT_CONSUMER_GROUP, id).thenAccept(ack -> {

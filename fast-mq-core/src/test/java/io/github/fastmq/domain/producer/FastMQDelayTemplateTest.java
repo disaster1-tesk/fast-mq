@@ -15,7 +15,7 @@ public class FastMQDelayTemplateTest extends BaseTest {
     @Test
     public void sendMsgTest() throws InterruptedException {
         Thread.sleep(2000l);
-        fastMQDelayTemplate.msgEnQueue("hello", 20, null, TimeUnit.SECONDS);
+        fastMQDelayTemplate.sendMsg("hello", 20, null, TimeUnit.SECONDS);
         while (true) {
         }
     }

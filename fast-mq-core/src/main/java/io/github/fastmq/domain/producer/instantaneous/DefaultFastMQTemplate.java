@@ -1,5 +1,6 @@
 package io.github.fastmq.domain.producer.instantaneous;
 
+import cn.hutool.core.bean.BeanUtil;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.prop.FastMQProperties;
 import io.github.fastmq.infrastructure.utils.BeanMapUtils;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -67,7 +69,7 @@ public class DefaultFastMQTemplate implements FastMQTemplate {
     @SneakyThrows
     private void _sendMsgAsync(String topic, Object obj, long nextId, Boolean isSequence) {
         StreamMessageId msgId = isSequence ? new StreamMessageId(nextId / FastMQConstant.GLOBAL_MARK, nextId % FastMQConstant.GLOBAL_MARK) : new StreamMessageId(SystemClock.now(), nextId);
-        Map<String, Object> msg = BeanMapUtils.toMap(obj);
+        Map<String, Object> msg = BeanUtil.beanToMap(obj, false, false);
         _sendMsg(topic, msgId, msg);
     }
 
