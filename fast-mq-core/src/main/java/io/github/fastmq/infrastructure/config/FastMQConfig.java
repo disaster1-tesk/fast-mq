@@ -9,6 +9,7 @@ import org.redisson.config.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
 import java.util.HashSet;
@@ -19,8 +20,9 @@ import java.util.Set;
  */
 @Configuration
 @Slf4j
+@ComponentScan("io.github.fastmq")
 @EnableConfigurationProperties({FastMQProperties.class, RedissonProperties.class})
-public class FastMQRedisConfig {
+public class FastMQConfig {
 
     private static final String PREFIX = "redis://";
 
@@ -81,7 +83,7 @@ public class FastMQRedisConfig {
         }
         MasterSlaveServersConfig masterSlaveServersConfig = config.useMasterSlaveServers().setMasterAddress(adds[0]);
         masterSlaveServersConfig.setSlaveAddresses(nodeAddress);
-        if (org.springframework.util.StringUtils.hasText(redissonProperties.getPassword())) {
+        if (StringUtils.hasText(redissonProperties.getPassword())) {
             masterSlaveServersConfig.setPassword(redissonProperties.getPassword());
         }
         if (StringUtils.hasText(redissonProperties.getDatabase())) {
@@ -114,7 +116,7 @@ public class FastMQRedisConfig {
         SentinelServersConfig serverConfig = config.useSentinelServers()
                 .addSentinelAddress(adds)
                 .setMasterName(redissonProperties.getMaster());
-        if (org.springframework.util.StringUtils.hasText(redissonProperties.getPassword())) {
+        if (StringUtils.hasText(redissonProperties.getPassword())) {
             serverConfig.setSentinelPassword(redissonProperties.getPassword());
         }
         if (StringUtils.hasText(redissonProperties.getDatabase())) {

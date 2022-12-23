@@ -21,6 +21,7 @@
 *.iml
 **/*.iml
 **/rebel.xml
+**/.flattened-pom.xml
 
 #file
 /log
