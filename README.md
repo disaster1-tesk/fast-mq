@@ -33,7 +33,7 @@
 <dependency>
   <groupId>io.github.disaster1-tesk</groupId>
   <artifactId>fast-mq</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
 </dependency>
 ```
 ### 队列 (Queue)
