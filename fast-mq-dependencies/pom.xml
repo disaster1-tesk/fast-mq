@@ -8,7 +8,7 @@
     <groupId>io.github.disaster1-tesk</groupId>
     <artifactId>fast-mq-dependencies</artifactId>
     <version>${revision}</version>
-
+    <name>fast-mq-dependencies</name>
     <packaging>pom</packaging>
     <description>fast-mq的版本管理包</description>
     <url>https://gitee.com/disaster_-camp/fast-mq</url>
@@ -38,9 +38,23 @@
         </repository>
     </distributionManagement>
 
+    <developers>
+        <developer>
+            <name>disaster</name>
+            <url>https://gitee.com/d__isaster</url>
+            <organization>disaster_-camp</organization>
+            <organizationUrl>https://gitee.com/disaster_-camp</organizationUrl>
+            <roles>
+                <role>
+                    manager
+                </role>
+            </roles>
+        </developer>
+    </developers>
+
     <properties>
         <!--   devops相关     -->
-        <revision>1.1.0</revision>
+        <revision>1.2.0</revision>
         <snapshot>1.0-SNAPSHOT</snapshot>
         <flatten-maven-plugin.version>1.2.7</flatten-maven-plugin.version>
         <maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>

@@ -15,8 +15,8 @@
     <version>1.1.0</version>
 
     <name>fast-mq-test Maven Webapp</name>
-    <!-- FIXME change it to the project's website -->
-    <url>http://www.example.com</url>
+    <description>存放 fast-mq 的案例</description>
+    <url>https://gitee.com/disaster_-camp/fast-mq</url>
 
     <properties>
         <maven.deploy.skip>true</maven.deploy.skip>
