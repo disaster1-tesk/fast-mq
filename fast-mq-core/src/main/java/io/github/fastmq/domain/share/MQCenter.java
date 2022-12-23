@@ -143,7 +143,7 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        if (fastMQProperties.getEnable()) {
+        if (Objects.nonNull(fastMQProperties.getEnable()) && fastMQProperties.getEnable()) {
             initThreadPool();
             Map<String, FastMQListener> fastMQListenerMap = applicationContext.getBeansOfType(FastMQListener.class);
             Map<String, FastMQDelayListener> fastMQDelayListenerMap = applicationContext.getBeansOfType(FastMQDelayListener.class);
@@ -268,14 +268,14 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
                     } catch (InterruptedException e) {
                         log.info("延时队列消费失败");
                     }
-                    if (Objects.nonNull(take)){
+                    if (Objects.nonNull(take)) {
                         log.info("开始消费延迟队列{}:消息内容{}", key, take);
                         try {
                             fastMQDelayListener.onMessage(BeanMapUtils.toBean(fastMQDelayListener.getClass(), take));
                             TimeUnit.MILLISECONDS.sleep(500);
                         } catch (Throwable e) {
                             log.info("延时队列逻辑执行失败！！");
-                        }finally {
+                        } finally {
                             log.info("消费逻辑执行失败");
                         }
                     }

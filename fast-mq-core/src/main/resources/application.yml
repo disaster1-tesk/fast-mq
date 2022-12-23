@@ -3,11 +3,12 @@
 #    active: dev
 #
 #
-#redisson:
-#  server:
-#    host: 127.0.0.1
-#    port: 6379
-#    database: 0
+redisson:
+  server:
+    host: 127.0.0.1
+    port: 6379
+    database: 0
+    password: 123456
 #    nodes: 127.0.0.1:xxx,127.0.0.1:xxx,127.0.0.1:xxx
 #    deployment: cluster
 

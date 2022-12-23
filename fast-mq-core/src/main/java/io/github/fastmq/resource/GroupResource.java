@@ -13,29 +13,32 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 
-@RequestMapping("/fast/mq")
+@RequestMapping("/fast/mq/group")
 @RestController
 public class GroupResource extends BaseResource {
     @Autowired
     private RedissonClient client;
 
-    @GetMapping("/group/query/{stream}/{group}")
-    public HttpResult query(@PathVariable("stream") @NonNull String stream, @PathVariable("group") @Nullable String group) {
-        String str = "return redis.call('XINFO',KEYS[1],KEYS[2],ARGV[1])";
+    @GetMapping("/query/{stream}")
+    public HttpResult query(@PathVariable("stream") @NonNull String stream) {
+        String str = "return redis.call('XINFO',KEYS[1],KEYS[2])";
         RScript script = client.getScript(StringCodec.INSTANCE);
         if (StringUtils.hasText(stream)) {
-            Object eval = script.eval(RScript.Mode.READ_ONLY, str, RScript.ReturnType.MULTI, Lists.list("consumers",appendPrefix(stream)), appendPrefix(group));
+            Object eval = script.eval(RScript.Mode.READ_ONLY, str, RScript.ReturnType.MULTI, Lists.list("GROUPS", appendPrefix(stream)));
             return HttpResult.success(eval);
         } else {
             return HttpResult.success("");
         }
+    }
+
+    @PostMapping("/create")
+    public HttpResult create(@RequestParam("topic") String topic, @RequestParam("group") String group) {
+        client.getStream(appendPrefix(topic)).createGroupAsync(group);
+        return HttpResult.success("创建成功");
     }
 
 
