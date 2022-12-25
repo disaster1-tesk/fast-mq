@@ -7,6 +7,7 @@ import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.util.Lists;
+import org.springframework.beans.BeanUtils;
 
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
@@ -37,35 +38,44 @@ public final class BeanMapUtils {
      */
     @SneakyThrows
     public static final Object toBean(Class<?> type, Map<Object, ? extends Object> map) {
-        Type[] genericInterfaces = type.getGenericInterfaces();
-        Type generic = null;
-        for (Type genericInterface : genericInterfaces) {
-            if (genericInterface.getTypeName().startsWith(FastMQListenerInfo)) {
-                ParameterizedType parameterizedType = (ParameterizedType) genericInterface;
-                generic = parameterizedType.getActualTypeArguments()[0];
-            }
-        }
+        Type generic = getType(type, FastMQListenerInfo);
         if (Objects.isNull(generic)) return map;
-        log.info(generic.getTypeName());
         Class<?> aClass = Class.forName(generic.getTypeName());
+        String msg = JSON.toJSONString(map);
+        Object parse0 = JSON.parse(msg);
+        Object parse1 = JSON.parseObject(msg, aClass);
         //hutool支持父类的解析
-        return BeanUtil.mapToBean(map, aClass, true, CopyOptions.create());
+        return isEquals(parse0, parse1) ? BeanUtil.mapToBean(map, aClass, true, CopyOptions.create()) : null;
     }
 
     @SneakyThrows
     public static final Object toBean(Class<?> type, String msg) {
+        Type generic = getType(type, FastMQDelayListenerInfo);
+        if (Objects.isNull(generic)) return msg;
+        Class<?> aClass = Class.forName(generic.getTypeName());
+        Object parse0 = JSON.parse(msg);
+        Object parse1 = JSON.parseObject(msg, aClass);
+        return isEquals(parse0, parse1) ? parse1 : null;
+    }
+
+
+    public static Boolean isEquals(Object source, Object target) {
+        Class<?> aClass0 = source.getClass();
+        Class<?> aClass1 = target.getClass();
+        return aClass0.equals(aClass1);
+    }
+
+
+    public static Type getType(Class<?> type, String typeName) {
         Type[] genericInterfaces = type.getGenericInterfaces();
         Type generic = null;
         for (Type genericInterface : genericInterfaces) {
-            if (genericInterface.getTypeName().startsWith(FastMQDelayListenerInfo)) {
+            if (genericInterface.getTypeName().startsWith(typeName)) {
                 ParameterizedType parameterizedType = (ParameterizedType) genericInterface;
                 generic = parameterizedType.getActualTypeArguments()[0];
             }
         }
-        if (Objects.isNull(generic)) return msg;
-        log.info(generic.getTypeName());
-        Class<?> aClass = Class.forName(generic.getTypeName());
-        return JSON.parseObject(msg, aClass);
+        return generic;
     }
 
 

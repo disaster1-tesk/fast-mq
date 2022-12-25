@@ -12,39 +12,46 @@ redisson:
 #    nodes: 127.0.0.1:xxx,127.0.0.1:xxx,127.0.0.1:xxx
 #    deployment: cluster
 
-#fastmq:
-#  config:
-#    #是否开启fastmq
-#    enable: true
-#    # 每次拉取数据的量
-#    fetchMessageSize: 5
-#    #每次拉取PendingList的大小
-#    pullPendingListSize: 1000
-#    #死信门槛（秒）
-#    deadLetterThreshold: 32
-#    #是否从头开始订阅消息
-#    isStartFromHead: true
-#    #超过了该长度stream前面部分会被持久化（非严格模式——MAXLEN~）
-#    trimThreshold: 10000
-#    #是否是异步
-#    isAsync: false
-#    executor:
-#      #拉取信息的周期(单位秒)
-#      checkPendingListsPeriod: 10
-#      #检查PendingList周期(单位秒)
-#      pullHealthyMessagesPeriod: 1
-#      time-unit: seconds
-#      #第一次延迟执行的时间
-#      initial-delay: 1
-#      #线程池的核心线程数，同步时调此参数能有效提高效率，如果采用的是异步消费的方式，使用默认配置即可
-#      executor-core-size: 20
-#    claim:
-#      #认领门槛(单位毫秒)
-#      claimThreshold: 20
-#      time-unit: milliseconds
-#    idle:
-#      #检查consumer不活跃的门槛（单位秒）
-#      pendingListIdleThreshold: 10
-#      time-unit: seconds
-
+fastmq:
+  config:
+    #是否开启fastmq
+    enable: false
+    # 每次拉取数据的量
+    fetchMessageSize: 5
+    #每次拉取PendingList的大小
+    pullPendingListSize: 1000
+    #死信门槛（秒）
+    deadLetterThreshold: 32
+    #是否从头开始订阅消息
+    isStartFromHead: true
+    #超过了该长度stream前面部分会被持久化（非严格模式——MAXLEN~）
+    trimThreshold: 10000
+    #是否是异步
+    isAsync: false
+    executor:
+      #拉取信息的周期(单位秒)
+      checkPendingListsPeriod: 10
+      #检查PendingList周期(单位秒)
+      pullHealthyMessagesPeriod: 1
+      time-unit: seconds
+      #第一次延迟执行的时间
+      initial-delay: 1
+      #线程池的核心线程数，同步时调此参数能有效提高效率，如果采用的是异步消费的方式，使用默认配置即可
+      executor-core-size: 20
+    claim:
+      #认领门槛(单位毫秒)
+      claimThreshold: 20
+      time-unit: milliseconds
+    idle:
+      #检查consumer不活跃的门槛（单位秒）
+      pendingListIdleThreshold: 10
+      time-unit: seconds
+spring:
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+    enabled: true
 

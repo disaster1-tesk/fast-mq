@@ -1,5 +1,6 @@
 package io.github.fastmq.infrastructure.config;
 
+import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.prop.FastMQProperties;
 import io.github.fastmq.infrastructure.prop.RedissonProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +8,7 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -34,6 +36,7 @@ public class FastMQConfig {
      */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnBean(RedissonProperties.class)
+    @ConditionalOnProperty(prefix = FastMQConstant.PREFIX,value = "enable",havingValue = "true")
     public RedissonClient redissonClient(RedissonProperties redissonProperties) {
         RedissonProperties.Deployment deployment = redissonProperties.getDeployment();
         switch (deployment) {

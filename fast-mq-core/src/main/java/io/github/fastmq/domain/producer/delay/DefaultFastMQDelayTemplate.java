@@ -1,6 +1,5 @@
 package io.github.fastmq.domain.producer.delay;
 
-import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.github.fastmq.infrastructure.constant.FastMQConstant;
@@ -13,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 
@@ -31,16 +29,14 @@ public class DefaultFastMQDelayTemplate implements FastMQDelayTemplate {
 
     @Override
     public void sendMsg(Object data, long delayTime, String delayQueue, TimeUnit timeUnit) {
-        String key = StringUtils.isEmpty(delayQueue) ? FastMQConstant.DEFAULT_DElAY_QUEUE : delayQueue;
+        String key = StringUtils.isEmpty(delayQueue) ? FastMQConstant.DEFAULT_DElAY_QUEUE : FastMQConstant.FAST_MQ_DELAY_PREFIX + delayQueue;
         String value = (data instanceof String) ? (String) data : JSON.toJSONString(data, SerializerFeature.DisableCircularReferenceDetect);
         try {
             RBlockingDeque<Object> blockingDeque = client.getBlockingDeque(key);
             RDelayedQueue<Object> delayedQueue = client.getDelayedQueue(blockingDeque);
-            //如果延时队列中原先存在这条消息，remove可以删除延时队列中的这条消息
-            //如果多次发送相同的消息，先remove再offer，只有最后一条会被延时消费，延时时间以最后一条的发送时间开始延时
             delayedQueue.remove(value);
-            delayedQueue.offer(value, delayTime, timeUnit);
-            log.info("添加延时队列成功,队列键：{}，队列值：{}，延迟时间：{}", key, value, timeUnit.toSeconds(delayTime) + "秒");
+            delayedQueue.offerAsync(value, delayTime, timeUnit);
+            log.info("添加延时队列成功，延迟时间：{},队列键：{}，队列值：{}", timeUnit.toSeconds(delayTime) + "秒", key, value);
         } catch (Exception e) {
             log.error("添加延时队列失败 {}", e.getMessage());
         }
@@ -53,11 +49,9 @@ public class DefaultFastMQDelayTemplate implements FastMQDelayTemplate {
         try {
             RBlockingDeque<Object> blockingDeque = client.getBlockingDeque(key);
             RDelayedQueue<Object> delayedQueue = client.getDelayedQueue(blockingDeque);
-            //如果延时队列中原先存在这条消息，remove可以删除延时队列中的这条消息
-            //如果多次发送相同的消息，先remove再offer，只有最后一条会被延时消费，延时时间以最后一条的发送时间开始延时
             delayedQueue.remove(value);
-            delayedQueue.offer(value, delayTime, timeUnit);
-            log.info("添加延时队列成功,队列键：{}，队列值：{}，延迟时间：{}", key, value, timeUnit.toSeconds(delayTime) + "秒");
+            delayedQueue.offerAsync(value, delayTime, timeUnit);
+            log.info("添加延时队列成功,延迟时间：{},队列键：{}，队列值：{}", timeUnit.toSeconds(delayTime) + "秒", key, value);
         } catch (Exception e) {
             log.error("添加延时队列失败 {}", e.getMessage());
         }
@@ -66,16 +60,13 @@ public class DefaultFastMQDelayTemplate implements FastMQDelayTemplate {
     @Override
     public void sendMsg(Object data, long delayTime) {
         String key = FastMQConstant.DEFAULT_DElAY_QUEUE;
-        //处理循环引用
         String value = (data instanceof String) ? (String) data : JSON.toJSONString(data, SerializerFeature.DisableCircularReferenceDetect);
         try {
             RBlockingDeque<Object> blockingDeque = client.getBlockingDeque(key);
             RDelayedQueue<Object> delayedQueue = client.getDelayedQueue(blockingDeque);
-            //如果延时队列中原先存在这条消息，remove可以删除延时队列中的这条消息
-            //如果多次发送相同的消息，先remove再offer，只有最后一条会被延时消费，延时时间以最后一条的发送时间开始延时
             delayedQueue.remove(value);
-            delayedQueue.offer(value, delayTime, TimeUnit.SECONDS);
-            log.info("添加延时队列成功,队列键：{}，队列值：{}，延迟时间：{}", key, value, delayTime + "秒");
+            delayedQueue.offerAsync(value, delayTime, TimeUnit.SECONDS);
+            log.info("添加延时队列成功，延迟时间：{},队列键：{}，队列值：{}", delayTime + "秒", key, value);
         } catch (Exception e) {
             log.error("添加延时队列失败 {}", e.getMessage());
         }

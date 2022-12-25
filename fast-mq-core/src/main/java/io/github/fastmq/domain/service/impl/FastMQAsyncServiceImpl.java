@@ -308,16 +308,19 @@ public class FastMQAsyncServiceImpl implements FastMQAsyncService {
 
     private void _onMessage(StreamMessageId id, Map<Object, Object> dtoMap, FastMQListener fastMQListener, RStream<Object, Object> stream, FastMQMessageListener fastMQMessageListener) {
         try {
-            fastMQListener.onMessage(BeanMapUtils.toBean(fastMQListener.getClass(),dtoMap));
-            if (Objects.isNull(fastMQMessageListener)) {
-                //ACK机制，比pubsub优秀
-                stream.ackAsync(FastMQConstant.DEFAULT_CONSUMER_GROUP, id).thenAccept(ack -> {
-                    printAckLog(id, fastMQMessageListener, ack);
-                });
-            } else {
-                stream.ackAsync(fastMQMessageListener.groupName(), id).thenAccept(ack -> {
-                    printAckLog(id, fastMQMessageListener, ack);
-                });
+            Object o = BeanMapUtils.toBean(fastMQListener.getClass(), dtoMap);
+            if (Objects.nonNull(o)){
+                fastMQListener.onMessage(BeanMapUtils.toBean(fastMQListener.getClass(),dtoMap));
+                if (Objects.isNull(fastMQMessageListener)) {
+                    //ACK机制，比pubsub优秀
+                    stream.ackAsync(FastMQConstant.DEFAULT_CONSUMER_GROUP, id).thenAccept(ack -> {
+                        printAckLog(id, fastMQMessageListener, ack);
+                    });
+                } else {
+                    stream.ackAsync(fastMQMessageListener.groupName(), id).thenAccept(ack -> {
+                        printAckLog(id, fastMQMessageListener, ack);
+                    });
+                }
             }
         } catch (Throwable e) {
             e.printStackTrace();

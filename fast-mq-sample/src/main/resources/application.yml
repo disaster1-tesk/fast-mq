@@ -45,6 +45,6 @@ fastmq:
       #检查consumer不活跃的门槛（单位秒）
       pendingListIdleThreshold: 10
       time-unit: seconds
-server:
-  port: 8081
+#server:
+#  port: 8081
 

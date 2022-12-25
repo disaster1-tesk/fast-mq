@@ -28,6 +28,6 @@ public @interface FastMQDelayMessageListener {
      *
      * @return the string
      */
-    String executorName() default FastMQConstant.DEFAULT_DELAY_EXECUTOR;
+    String executorName() default "";
 
 }

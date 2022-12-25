@@ -1,9 +1,15 @@
 package io.github.fastmq.resource;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.github.fastmq.domain.producer.delay.FastMQDelayTemplate;
 import io.github.fastmq.domain.producer.instantaneous.FastMQTemplate;
+import io.github.fastmq.infrastructure.constant.FastMQConstant;
 import io.github.fastmq.infrastructure.http.HttpResult;
+import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.util.Lists;
+import org.redisson.api.RBlockingDeque;
+import org.redisson.api.RDelayedQueue;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
@@ -19,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/fast/mq/message")
+@Slf4j
 public class MessageResource extends BaseResource {
     @Autowired
     private FastMQTemplate fastMQTemplate;
@@ -48,7 +55,7 @@ public class MessageResource extends BaseResource {
 
     @PostMapping("/addDelayMsg")
     public HttpResult addDelayMsg(@RequestParam("topic") String topic, @RequestParam("delayTime") long delayTime, @RequestBody Map msg) {
-        fastMQDelayTemplate.sendMsg(msg, delayTime, appendPrefix(topic), TimeUnit.SECONDS);
+        fastMQDelayTemplate.sendMsg(msg, delayTime, topic, TimeUnit.MILLISECONDS);
         return HttpResult.success("发送成功");
     }
 

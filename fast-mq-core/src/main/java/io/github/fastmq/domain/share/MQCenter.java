@@ -25,12 +25,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import javax.annotation.PostConstruct;
 import java.util.*;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * mq的事件处理中心
@@ -128,11 +124,19 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
         service = Executors.newScheduledThreadPool(
                 fastMQProperties.getExecutor().getExecutorCoreSize(),
                 ThreadFactoryBuilder.create()
-                        .setDaemon(true)
+                        .setDaemon(false)
+                        .setNameFormat("fast-mq-schedule-")
                         .setUncaughtExceptionHandler((t, e) -> log.debug("线程:{},异常{}", t.getName(), e.getMessage()))
                         .setPriority(6)
                         .get());
-        ThreadPoolUtil.init(service);
+        ThreadPoolUtil.QUEUE.init(service);
+        ExecutorService delayExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), ThreadFactoryBuilder.create()
+                .setNameFormat("fast-mq-delay")
+                .setDaemon(false)
+                .setUncaughtExceptionHandler((t, e) -> log.debug("线程:{},异常{}", t.getName(), e.getMessage()))
+                .get());
+        ThreadPoolUtil.DELAY.init(delayExecutor);
+        log.info("fast-mq线程池初始化完成！！");
     }
 
     @Override
@@ -256,39 +260,50 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
             Class<? extends FastMQDelayListener> aClass = fastMQDelayListener.getClass();
             FastMQDelayMessageListener annotation = aClass.getAnnotation(FastMQDelayMessageListener.class);
             String key = Objects.nonNull(annotation) && StringUtils.hasText(annotation.queueName()) ? annotation.queueName() : FastMQConstant.DEFAULT_DElAY_QUEUE;
-            String executorName = annotation.executorName();
             RBlockingDeque<Object> blockingDeque = client.getBlockingDeque(key);
             client.getDelayedQueue(blockingDeque);
-            Executor bean = applicationContext.getBean(executorName, Executor.class);
-            bean.execute(() -> {
-                while (!Thread.interrupted()) {
-                    String take = null;
-                    try {
-                        take = (String) blockingDeque.take();
-                    } catch (InterruptedException e) {
-                        log.info("延时队列消费失败");
+            if (Objects.nonNull(annotation) && StringUtils.hasText(annotation.executorName())) {
+                ThreadPoolTaskExecutor bean = applicationContext.getBean(annotation.queueName(), ThreadPoolTaskExecutor.class);
+                bean.submit(() -> {
+                    doDelayMsgConsumer(fastMQDelayListener, key, blockingDeque);
+                });
+            } else {
+                ThreadPoolUtil.DELAY.run(() -> {
+                    doDelayMsgConsumer(fastMQDelayListener, key, blockingDeque);
+                });
+            }
+        }
+
+    }
+
+    private void doDelayMsgConsumer(FastMQDelayListener fastMQDelayListener, String key, RBlockingDeque<Object> blockingDeque) {
+        while (!Thread.interrupted()) {
+            String take = null;
+            try {
+                take = (String) blockingDeque.take();
+            } catch (InterruptedException e) {
+                log.info("延时队列消费失败");
+            }
+            if (Objects.nonNull(take)) {
+                try {
+                    Object o = BeanMapUtils.toBean(fastMQDelayListener.getClass(), take);
+                    if (Objects.nonNull(o)) {
+                        log.info("开始消费延迟消息,队列键{}:队列值{}", key, take);
+                        fastMQDelayListener.onMessage(BeanMapUtils.toBean(fastMQDelayListener.getClass(), take));
+                        TimeUnit.MILLISECONDS.sleep(500);
+                        log.info("队列键{}:队列值{}，消费成功", key, take);
                     }
-                    if (Objects.nonNull(take)) {
-                        log.info("开始消费延迟队列{}:消息内容{}", key, take);
-                        try {
-                            fastMQDelayListener.onMessage(BeanMapUtils.toBean(fastMQDelayListener.getClass(), take));
-                            TimeUnit.MILLISECONDS.sleep(500);
-                        } catch (Throwable e) {
-                            log.info("延时队列逻辑执行失败！！");
-                        } finally {
-                            log.info("消费逻辑执行失败");
-                        }
-                    }
+                } catch (Throwable e) {
+                    log.info("延时队列逻辑执行失败！！");
                 }
-            });
+            }
         }
     }
 
 
     private void start() {
-        log.info("stream队列处理线程池fast-mq-schedule-pool初始化完成！！");
         /**
-         * 延时队列后台线程
+         * 延时队列后台线程,TODO 需要优化成打印日志
          */
         service.schedule(() -> {
             consumeFastMQListeners2();

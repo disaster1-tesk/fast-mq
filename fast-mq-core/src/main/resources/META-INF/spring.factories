@@ -1,4 +1,3 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  io.github.fastmq.infrastructure.config.FastMQConfig,\
-  io.github.fastmq.infrastructure.config.ExecutorConfig
+  io.github.fastmq.infrastructure.config.FastMQConfig
 

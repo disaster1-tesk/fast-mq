@@ -232,12 +232,12 @@ public class FastMQServiceImpl implements FastMQService {
     private void consumeMessage(StreamMessageId id, Map<Object, Object> dtoMap, FastMQListener fastMQListener, RStream<Object, Object> stream, FastMQMessageListener fastMQMessageListener) {
         //如果操作是幂等的则不需要加分布式锁
         if (Objects.nonNull(fastMQMessageListener) && fastMQMessageListener.idempotent()) {
-            ThreadPoolUtil.run(() -> {
+            ThreadPoolUtil.QUEUE.run(() -> {
                 //消费端逻辑回调
                 _onMessage(id, dtoMap, fastMQListener, stream, fastMQMessageListener);
             });
         } else {
-            ThreadPoolUtil.run(() -> {
+            ThreadPoolUtil.QUEUE.run(() -> {
                 String lockName = Objects.isNull(fastMQMessageListener) ? FastMQConstant.DEFAULT_CONSUMER_GROUP + ":" + id.toString()
                         : fastMQMessageListener.groupName() + ":" + id.toString();
                 RLock lock = client.getLock(lockName);
@@ -268,16 +268,19 @@ public class FastMQServiceImpl implements FastMQService {
 
     private void _onMessage(StreamMessageId id, Map<Object, Object> dtoMap, FastMQListener fastMQListener, RStream<Object, Object> stream, FastMQMessageListener fastMQMessageListener) {
         try {
-            fastMQListener.onMessage(BeanMapUtils.toBean(fastMQListener.getClass(),dtoMap));
-            if (Objects.isNull(fastMQMessageListener)) {
-                //ACK机制，比pubsub优秀
-                stream.ackAsync(FastMQConstant.DEFAULT_CONSUMER_GROUP, id).thenAccept(ack -> {
-                    printAckLog(id, fastMQMessageListener, ack);
-                });
-            } else {
-                stream.ackAsync(fastMQMessageListener.groupName(), id).thenAccept(ack -> {
-                    printAckLog(id, fastMQMessageListener, ack);
-                });
+            Object o = BeanMapUtils.toBean(fastMQListener.getClass(), dtoMap);
+            if (Objects.nonNull(o)){
+                fastMQListener.onMessage(BeanMapUtils.toBean(fastMQListener.getClass(),dtoMap));
+                if (Objects.isNull(fastMQMessageListener)) {
+                    //ACK机制，比pubsub优秀
+                    stream.ackAsync(FastMQConstant.DEFAULT_CONSUMER_GROUP, id).thenAccept(ack -> {
+                        printAckLog(id, fastMQMessageListener, ack);
+                    });
+                } else {
+                    stream.ackAsync(fastMQMessageListener.groupName(), id).thenAccept(ack -> {
+                        printAckLog(id, fastMQMessageListener, ack);
+                    });
+                }
             }
         } catch (Throwable e) {
             e.printStackTrace();

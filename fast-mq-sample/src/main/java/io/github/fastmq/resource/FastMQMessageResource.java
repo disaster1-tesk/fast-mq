@@ -24,7 +24,8 @@ public class FastMQMessageResource {
     private FastMQTemplate fastMQTemplate;
     @Autowired
     private FastMQDelayTemplate fastMQDelayTemplate;
-    
+
+
     @GetMapping("/sendMsg")
     public String sendMsg(){
         AttachmentEntity test = AttachmentEntity.builder()
@@ -71,6 +72,7 @@ public class FastMQMessageResource {
                 .build();
         build2.setId(100l);
         fastMQTemplate.sendMsgAsync(FastMQConstant.DEFAULT_TOPIC,build2);
+        fastMQTemplate.sendMsgAsync(FastMQConstant.DEFAULT_TOPIC,"sd");
         return "成功！！";
     }
 

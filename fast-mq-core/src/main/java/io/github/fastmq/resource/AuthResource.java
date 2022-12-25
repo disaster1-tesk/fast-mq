@@ -2,10 +2,12 @@ package io.github.fastmq.resource;
 
 import io.github.fastmq.infrastructure.http.HttpResult;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
 @RequestMapping("/fast/mq/auth")
-@RestController
+@Controller
 public class AuthResource {
 
     @Value("${fast.config.auth.username:fastmq}")
@@ -14,8 +16,9 @@ public class AuthResource {
     public String password;
 
 
-    @PutMapping("/auth/login/{username}/{password}")
-    public HttpResult login(@PathVariable("username") String username, @PathVariable("password") String password) {
+    @PutMapping("/login/{username}/{password}")
+    @ResponseBody
+    public HttpResult auth(@PathVariable("username") String username, @PathVariable("password") String password) {
         if (username.equals(this.username) && password.equals(this.password)) {
             return HttpResult.success("登录成功");
         }
