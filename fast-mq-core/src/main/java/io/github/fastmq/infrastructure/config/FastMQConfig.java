@@ -8,12 +8,14 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.*;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -35,8 +37,9 @@ public class FastMQConfig {
      * @return the redisson client
      */
     @Bean(destroyMethod = "shutdown")
+    @ConditionalOnMissingBean({RedissonClient.class})
     @ConditionalOnBean(RedissonProperties.class)
-    @ConditionalOnProperty(prefix = FastMQConstant.PREFIX,value = "enable",havingValue = "true")
+    @ConditionalOnProperty(prefix = FastMQConstant.PREFIX, value = "enable", havingValue = "true")
     public RedissonClient redissonClient(RedissonProperties redissonProperties) {
         RedissonProperties.Deployment deployment = redissonProperties.getDeployment();
         switch (deployment) {
@@ -54,7 +57,6 @@ public class FastMQConfig {
     }
 
     /**
-     *
      * STAND_ALONE("stand_alone"),
      * MASTER_SLAVE("master_slave"),
      * CLUSTER("cluster"),

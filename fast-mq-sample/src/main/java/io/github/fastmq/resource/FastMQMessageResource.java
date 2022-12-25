@@ -121,7 +121,7 @@ public class FastMQMessageResource {
                 .result(Lists.list(build, build1))
                 .build();
         build2.setId(100l);
-        fastMQDelayTemplate.sendMsg(build2,1);
+        fastMQDelayTemplate.sendMsg(build2,20);
         return "成功！！";
     }
 }
