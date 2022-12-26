@@ -32,8 +32,8 @@
 ##此版本还未有监控页面
 <dependency>
   <groupId>io.github.disaster1-tesk</groupId>
-  <artifactId>fast-mq</artifactId>
-  <version>1.2.0</version>
+  <artifactId>fast-mq-core</artifactId>
+  <version>1.3.0</version>
 </dependency>
 ```
 ### 队列 (Queue)
@@ -136,7 +136,9 @@ public class FastMQDelayConsumerAnnotationTest implements FastMQDelayListener {
 }
 ```
 ##  💐 配置 （Configuration）
-### Redission配置项
+### 🦫Redission配置项
+#### 1.fast-mq内置配置
+fast-mq支持通过YAML配置Redission单机、主从、集群
 ```
 ## 单机版本
 redisson:
@@ -155,7 +157,7 @@ redisson:
     master: mymaster
     deployment: master_slave
 ## 集群
-redisson:
+
   server:
     host: 127.0.0.1
     port: 6379
@@ -163,11 +165,29 @@ redisson:
     nodes: 127.0.0.1:xxx,127.0.0.1:xxx,127.0.0.1:xxx
     deployment: cluster
 ```
-### FastMQ配置项
+#### 2.用户自定义
+如果不想使用fast-mq提供的Redission-YAML配置，则只需要在springboot项目中实例化一个RedissonClient对象并被spring管理即可
+```java
+@Configuration
+public class RedissionConfig {
+
+    @Bean
+    public RedissonClient redissonClient() {
+        Config config = new Config();
+        SingleServerConfig singleServerConfig = config.useSingleServer();
+        singleServerConfig.setAddress("redis://" + "127.0.0.1:6379");
+        singleServerConfig.setDatabase(1);
+        singleServerConfig.setPassword("123456");
+        return Redisson.create(config);
+    }
+}
+```
+### 🦦FastMQ配置项
 
 ```
 fastmq:
   config:
+    #是否开启fastmq
     enable: false
     # 每次拉取数据的量
     fetchMessageSize: 5
@@ -182,10 +202,10 @@ fastmq:
     #是否是异步
     isAsync: false
     executor:
-      #拉取信息的周期(单位秒)
-      checkPendingListsPeriod: 10
-      #检查PendingList周期(单位秒)
-      pullHealthyMessagesPeriod: 1
+      #拉取默认主题信息的周期
+      pullDefaultTopicMessagesPeriod: 10
+      #检查PendingList周期
+      pullTopicMessagesPeriod: 1
       time-unit: seconds
       #第一次延迟执行的时间
       initial-delay: 1
