@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.*;
 import org.redisson.client.RedisBusyException;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -40,7 +41,7 @@ import java.util.concurrent.*;
 @Component
 @Slf4j
 @Data
-public class MQCenter implements ApplicationRunner, ApplicationContextAware {
+public class MQCenter implements ApplicationRunner, ApplicationContextAware, DisposableBean {
     /**
      * 存放没有注解修饰的监听器
      */
@@ -130,7 +131,7 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
                         .setPriority(6)
                         .get());
         ThreadPoolUtil.QUEUE.init(service);
-        ExecutorService delayExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), ThreadFactoryBuilder.create()
+        ExecutorService delayExecutor = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder.create()
                 .setNameFormat("fast-mq-delay")
                 .setDaemon(false)
                 .setUncaughtExceptionHandler((t, e) -> log.debug("线程:{},异常{}", t.getName(), e.getMessage()))
@@ -282,7 +283,7 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
             try {
                 take = (String) blockingDeque.take();
             } catch (InterruptedException e) {
-                log.info("延时队列消费失败");
+                log.info("延时线程中断!");
             }
             if (Objects.nonNull(take)) {
                 try {
@@ -336,4 +337,12 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware {
     }
 
 
+    @Override
+    public void destroy() throws Exception {
+        ExecutorService threadPool = ThreadPoolUtil.QUEUE.getThreadPool();
+        threadPool.shutdown();
+        if (threadPool.isShutdown()) {
+            log.info("fast-mq线程池销毁完成");
+        }
+    }
 }

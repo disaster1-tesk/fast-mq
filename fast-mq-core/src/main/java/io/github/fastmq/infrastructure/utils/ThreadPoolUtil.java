@@ -1,12 +1,10 @@
 package io.github.fastmq.infrastructure.utils;
 
+import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 
 public enum ThreadPoolUtil {
@@ -27,23 +25,19 @@ public enum ThreadPoolUtil {
         executor.execute(runnable);
     }
 
+    public <T> void submit(Callable<T> task){
+        executor.submit(task);
+    }
+
     public void submitTask(Runnable runnable) {
         getThreadPool().submit(runnable);
     }
 
-
+    @SneakyThrows
     public boolean close() {
-        getThreadPool().shutdown();
-        boolean isClose;
-        while (!getThreadPool().isTerminated()) {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                log.error(e.getMessage(), e);
-            }
-        }
-        isClose = true;
-        return isClose;
+        Thread.sleep(1000);
+        getThreadPool().shutdownNow();
+        return getThreadPool().isShutdown();
     }
 
 
