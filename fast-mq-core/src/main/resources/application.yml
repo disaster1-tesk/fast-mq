@@ -31,7 +31,7 @@ fastmq:
     executor:
       #拉取默认主题信息的周期
       pullDefaultTopicMessagesPeriod: 10
-      #检查PendingList周期
+      #拉取自定义主题信息的周期
       pullTopicMessagesPeriod: 1
       time-unit: seconds
       #第一次延迟执行的时间

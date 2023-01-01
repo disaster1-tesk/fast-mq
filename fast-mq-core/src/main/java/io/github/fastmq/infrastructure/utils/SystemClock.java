@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <p>
- * 高并发场景下System.currentTimeMillis()的性能问题的优化
+ * 高并发场景下System.currentTimeMillis()的性能问题的优化、redis中的LRU链表中的时间戳就是通过这种方式去实现（很高效也很有用）
  * </p>
  * <p>
  * System.currentTimeMillis()的调用比new一个普通对象要耗时的多<br>

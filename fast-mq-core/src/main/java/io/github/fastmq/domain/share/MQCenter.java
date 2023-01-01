@@ -57,30 +57,37 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware, Dis
      */
     private Set<FastMQDelayListener> fastMQListeners2;
 
-
     /**
      * redissonClient对象
      */
-    @Autowired
-    private RedissonClient client;
+    private final RedissonClient client;
 
     /**
      * fastmq配置属性
      */
-    @Autowired
-    private FastMQProperties fastMQProperties;
+    private final FastMQProperties fastMQProperties;
 
     /**
      * 领域服务对象-异步
      */
-    @Autowired
-    private FastMQAsyncService fastMQAsyncService;
+    private final FastMQAsyncService fastMQAsyncService;
 
     /**
      * 领域服务对象-同步
      */
+    private final FastMQService fastMQService;
+
+
     @Autowired
-    private FastMQService fastMQService;
+    public MQCenter(RedissonClient client, FastMQProperties fastMQProperties, FastMQAsyncService fastMQAsyncService, FastMQService fastMQService) {
+        this.client = client;
+        this.fastMQProperties = fastMQProperties;
+        this.fastMQAsyncService = fastMQAsyncService;
+        this.fastMQService = fastMQService;
+        fastMQListeners0 = new HashSet<>();
+        fastMQListeners1 = new HashSet<>();
+        fastMQListeners2 = new HashSet<>();
+    }
 
     /**
      * spring上下文对象，用于获取fastmq的bean实例
@@ -109,15 +116,6 @@ public class MQCenter implements ApplicationRunner, ApplicationContextAware, Dis
         ;
 
         luaStr = sb.toString();
-    }
-
-    /**
-     * Instantiates a new Mq center.
-     */
-    public MQCenter() {
-        fastMQListeners0 = new HashSet<>();
-        fastMQListeners1 = new HashSet<>();
-        fastMQListeners2 = new HashSet<>();
     }
 
 

@@ -17,7 +17,7 @@ import java.lang.reflect.*;
 import java.util.*;
 
 /**
- * Bean和Map类型转换工具类,参考自Barry
+ * Bean和Map类型转换工具类
  *
  * @author disaster
  * @version 1.0
@@ -48,6 +48,13 @@ public final class BeanMapUtils {
         return isEquals(parse0, parse1) ? BeanUtil.mapToBean(map, aClass, true, CopyOptions.create()) : null;
     }
 
+    /**
+     * To bean object.
+     *
+     * @param type the type
+     * @param msg  the msg
+     * @return the object
+     */
     @SneakyThrows
     public static final Object toBean(Class<?> type, String msg) {
         Type generic = getType(type, FastMQDelayListenerInfo);
@@ -59,6 +66,13 @@ public final class BeanMapUtils {
     }
 
 
+    /**
+     * Is equals boolean.
+     *
+     * @param source the source
+     * @param target the target
+     * @return the boolean
+     */
     public static Boolean isEquals(Object source, Object target) {
         Class<?> aClass0 = source.getClass();
         Class<?> aClass1 = target.getClass();
@@ -66,6 +80,13 @@ public final class BeanMapUtils {
     }
 
 
+    /**
+     * Gets type.
+     *
+     * @param type     the type
+     * @param typeName the type name
+     * @return the type
+     */
     public static Type getType(Class<?> type, String typeName) {
         Type[] genericInterfaces = type.getGenericInterfaces();
         Type generic = null;
